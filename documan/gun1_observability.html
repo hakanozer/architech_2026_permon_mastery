@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>.NET Performance Mastery – Gün 1</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --panel: #ffffff;
+      --panel-alt: #eef3f9;
+      --ink: #1a2433;
+      --muted: #52627a;
+      --line: #d9e2ec;
+      --brand: #0d6efd;
+      --brand-2: #ff7a18;
+      --success: #2e8b57;
+      --warn: #d97706;
+      --danger: #c62828;
+      --code-bg: #0f172a;
+      --shadow: 0 16px 36px rgba(15, 23, 42, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: Inter, "Segoe UI", sans-serif;
+      background: linear-gradient(180deg, #f7f9fc 0%, #eef3f8 100%);
+      color: var(--ink);
+      line-height: 1.7;
+    }
+
+    .container {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 24px 18px 80px;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, #0b1f3a, #0d6efd 46%, #ff7a18 100%);
+      color: #fff;
+      padding: 28px 0 48px;
+      box-shadow: var(--shadow);
+    }
+
+    .hero-inner {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 0 18px;
+    }
+
+    .kicker {
+      font-size: 12px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      opacity: 0.9;
+    }
+
+    h1, h2, h3, h4 {
+      line-height: 1.2;
+      margin-top: 0;
+    }
+
+    h1 {
+      font-size: clamp(2.1rem, 3vw, 3.2rem);
+      margin: 12px 0 12px;
+    }
+
+    h2 {
+      font-size: clamp(1.65rem, 2vw, 2.2rem);
+      margin: 28px 0 14px;
+      color: var(--ink);
+      border-bottom: 2px solid var(--line);
+      padding-bottom: 8px;
+    }
+
+    h3 {
+      font-size: 1.2rem;
+      margin: 20px 0 12px;
+      color: var(--ink);
+    }
+
+    .nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin: 12px 0 0;
+    }
+
+    .nav a {
+      text-decoration: none;
+      background: rgba(255,255,255,0.12);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.18);
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      padding: 24px;
+      margin-top: 24px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 18px;
+      margin-top: 18px;
+    }
+
+    .metric {
+      background: var(--panel-alt);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 18px;
+    }
+
+    .metric strong {
+      display: block;
+      font-size: 1.8rem;
+      color: var(--brand);
+    }
+
+    .label {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      margin-bottom: 8px;
+    }
+
+    .label.neden { background: #e0f2fe; color: #0c4a6e; }
+    .label.nedir { background: #fff1db; color: #9a4d00; }
+    .label.nasil { background: #e8f5e9; color: #1b5e20; }
+    .label.uyg { background: #ede9fe; color: #4c1d95; }
+    .label.sonuc { background: #f3e8ff; color: #6b21a8; }
+
+    .best, .warn, .term {
+      margin-top: 18px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      padding: 16px 18px;
+      background: #fff;
+    }
+
+    .best {
+      background: linear-gradient(180deg, #ecfdf5, #f8fffb);
+      border-color: #b7ebc8;
+    }
+
+    .warn {
+      background: linear-gradient(180deg, #fff7ed, #fffdf5);
+      border-color: #f8d99a;
+    }
+
+    .term {
+      background: #f8fafc;
+    }
+
+    details {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      margin-top: 10px;
+      padding: 10px 14px;
+    }
+
+    summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    code, pre {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    }
+
+    pre {
+      white-space: pre-wrap;
+      word-break: break-word;
+      background: var(--code-bg);
+      color: #eaf2ff;
+      border-radius: 14px;
+      padding: 18px;
+      margin: 18px 0 12px;
+      overflow-x: auto;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
+    }
+
+    code {
+      font-size: 0.92rem;
+    }
+
+    .lab ol {
+      margin: 18px 0 0;
+      padding-left: 20px;
+    }
+
+    .lab li {
+      margin-bottom: 14px;
+      padding: 10px 12px;
+      background: #f9fbfd;
+      border-left: 4px solid var(--brand);
+      border-radius: 10px;
+    }
+
+    .lab strong {
+      color: var(--brand);
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 22px;
+    }
+
+    .mini {
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+
+    ul, ol {
+      padding-left: 20px;
+    }
+
+    li { margin-bottom: 8px; }
+
+    footer {
+      margin-top: 40px;
+      border-top: 1px solid var(--line);
+      padding-top: 20px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .course-map, .control-panel { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); margin-top: 18px; }
+    .course-map a, .control-panel button { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: var(--panel-alt); color: var(--ink); text-decoration: none; font: inherit; text-align: left; cursor: pointer; }
+    .course-map a.active, .control-panel button.active { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.12); }
+    .progress-wrap { margin-top: 18px; background: var(--panel-alt); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+    progress { width: 100%; height: 12px; accent-color: var(--success); }
+    .lab li.done { opacity: 0.62; border-left-color: var(--success); }
+    .lab li.done strong::after { content: " ✓"; color: var(--success); }
+    .lab li[data-step] { cursor: pointer; }
+    .service-table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+    .service-table th, .service-table td { border-bottom: 1px solid var(--line); padding: 10px; text-align: left; vertical-align: top; }
+    .service-table th { color: var(--muted); font-size: 0.85rem; }
+    .status-live { color: var(--success); font-weight: 700; }
+    .status-gap { color: var(--danger); font-weight: 700; }
+
+    @media (max-width: 820px) {
+      .two-col { grid-template-columns: 1fr; }
+      .card { padding: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-inner">
+      <div class="kicker">Kurumsal Mentorluk · .NET Performance Mastery</div>
+      <h1>GÜN 1 · Görünür Olmak: Observability & Temel Tanılama</h1>
+      <div class="nav">
+        <a href="#neden">Sektörel Bakıș</a>
+        <a href="#nedir">Kavramsal Temel</a>
+        <a href="#nasil">Araç Kurulumu</a>
+        <a href="#uygulama">Uygulama & Analiz</a>
+        <a href="#sonuc">Sonuç & Best Practice</a>
+      </div>
+      <div class="course-map" aria-label="Üç günlük eğitim haritası">
+        <a class="active" href="gun1_observability.html">Gün 1 · Görünür Olmak</a>
+        <a href="gun2_debugging_sql.html">Gün 2 · Derinlemesine Teşhis</a>
+        <a href="gun3_code_perf_memory.html">Gün 3 · Kod Seviyesi Optimizasyon</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section id="neden" class="card">
+      <span class="label neden">SEKTÖREL BAKIŞ (Neden?)</span>
+      <h2>İnternet çöktüğünde “neden” sorusunu doğru cevaplamazsanız, sisteminizi kurtaramazsınız.</h2>
+      <p>Latans, throughput ve error rate; işin özünü anlatır. Bir Black Friday spike sırasında 250 ms üstüne çıkan latans, 1.2 saniyelere çıkan API yanıtları ve %8’e yükselen hata oranı, sadece teknik bir sorun değil, gelir kaybı, müşteri kaybı ve operasyonel kaosu doğurur.</p>
+      <div class="grid">
+        <div class="metric">
+          <strong>120–300 ms</strong>
+          <span>Hedeflatans eşiği; üstünde iyileştirme gerektirir.</span>
+        </div>
+        <div class="metric">
+          <strong>RPS</strong>
+          <span>Throughput, servislerin iş yükü altında taşıma kapasitesini gösterir.</span>
+        </div>
+        <div class="metric">
+          <strong>%0.1–1%</strong>
+          <span>Genelde kabul edilebilir hata oranı bandı; üstüne çıkarsa olay yönetimi başlar.</span>
+        </div>
+      </div>
+      <div class="warn">
+        <strong>⚠️ Dikkat:</strong> “Sistem yavaş” demek yeterli değildir. Hangi metrik bozuldu? Hangi endpoint? Hangi kullanıcı segmenti? Üretimde bunu bilmiyorsanız, kendi başına kör bir yumurta tavada kalırsınız.
+      </div>
+      <div class="best">
+        <strong>💡 Best Practice:</strong> Her servis için SLO/SLA tanımla: p95 latency, error rate, saturation. Bunu net ölçmeden performans çabası kördür.
+      </div>
+      <h3>Bu projedeki gerçek örnek</h3>
+      <p>Bu repo’da <code>Program.cs</code> içinde global rate limiting tanımlı. <code>AuthController.Login</code> JWT üretimi, <code>GlobalMiddleware</code> her istek için kullanıcı/IP/URL bilgisi logluyor. Bu, “görünürlük” için temel örneklerdir. Ayrıca <code>NoteController.GetAll()</code> içinde <code>int ii = i / 0;</code> çalışması, olay esnasında “hata oranı” ve “structured logging” neden kritik olduğunu gösterir.</p>
+    </section>
+
+    <section id="nedir" class="card">
+      <span class="label nedir">KAVRAMSAL TEMEL (Nedir?)</span>
+      <h2>Latency, Throughput ve Error Rate; üç olgunun hikâyesi</h2>
+      <p>Bir otobüs terminalini düşünün. Latency, bir yolcunun terminale girişten otobüse binmesine kadar geçen süre; throughput, terminalin saatlik taşıma kapasitesi; error rate ise yolcuların “yolculuk sırasında” kaybedilen ya da geri dönen kısmıdır.</p>
+      <div class="two-col">
+        <div>
+          <h3>Latency</h3>
+          <ul>
+            <li>“Cevap ne kadar sürede döndü?”</li>
+            <li>客户端 <code>p50 / p95 / p99</code> ölçülür.</li>
+            <li>Özellikle bankacılık, e-ticaret, checkout akışları için hayatta kalma-kriteridir.</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Throughput</h3>
+          <ul>
+            <li>“Servis bir saniyede kaç istek kaldırabilir?”</li>
+            <li>RPS, TPS, QPS gibi metriklerle anlam kazanır.</li>
+            <li>Tepe yükte kapasite planlaması için olmazsa olmazdır.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="term">
+        <strong>🔑 Terimler:</strong>
+        <details>
+          <summary>Latency</summary>
+          <p>İstekten yanıtın alınmasına kadar geçen süre. Aşırı yük altında p95 ve p99 değerleri çok daha kritik hale gelir.</p>
+        </details>
+        <details>
+          <summary>Throughput</summary>
+          <p>Birim zamanda işlenen istek sayısı. Sistem tasarımında kapasite ve ölçeklenebilirlik için temel göstergedir.</p>
+        </details>
+        <details>
+          <summary>Error rate</summary>
+          <p>Başarısız istek oranı. 5xx, timeout, retry, validation fail gibi olayları kapsar.</p>
+        </details>
+      </div>
+      <h3>Bu repo’de neden önemli?</h3>
+      <p>Bu API’de güçlü örnekler var: login endpoinitleri, rate limit, global exception handler, JWT güvenlik katmanı ve note/product auth separation. Bütün bunlar “görünürlük” ve “kontrol” için temel alanları açar.</p>
+    </section>
+
+    <section id="nasil" class="card">
+      <span class="label nasil">ARAÇ KURULUMU VE ARAYÜZ (Nasıl?)</span>
+      <h2>İzlemeyi “sadece log yazmak” sanmayın. Metrik ve trace ile akışa bakın.</h2>
+      <h3>1) .NET için OpenTelemetry kurulumu</h3>
+      <pre><code>dotnet add package OpenTelemetry.Extensions.Hosting
+                dotnet add package OpenTelemetry.Exporter.OpenTelemetryProtocol
+                dotnet add package OpenTelemetry.Instrumentation.AspNetCore
+                dotnet add package OpenTelemetry.Instrumentation.Http
+                dotnet add package OpenTelemetry.Instrumentation.SqlClient
+                dotnet add package OpenTelemetry.Exporter.Jaeger</code></pre>
+      <pre><code>using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddOpenTelemetry()
+    .ConfigureResource(resource =&gt; resource
+        .AddService(serviceName: "RestApi"))
+    .WithTracing(tracing =&gt; tracing
+        .AddAspNetCoreInstrumentation()
+        .AddHttpClientInstrumentation()
+        .AddSqlClientInstrumentation()
+        .AddJaegerExporter(options =&gt;
+        {
+            options.AgentHost = "localhost";
+            options.AgentPort = 6831;
+        }))
+    .WithMetrics(metrics =&gt; metrics
+        .AddAspNetCoreInstrumentation()
+        .AddRuntimeInstrumentation());</code></pre>
+      <h3>2) Jaeger UI kurulumu</h3>
+      <p>Docker ile hızlı kurulum:</p>
+      <pre><code>docker run -d --name jaeger \
+  -e COLLECTOR_ZIPKIN_HOST_PORT=:9411 \
+  -p 16686:16686 \
+  -p 4317:4317 \
+  -p 4318:4318 \
+  jaegertracing/all-in-one:1.57</code></pre>
+      <p>Arayüz: <code>http://localhost:16686</code> → “Search” → “RestApi” servisini seç.</p>
+      <h3>3) Serilog ile structured logging</h3>
+      <pre><code>dotnet add package Serilog.AspNetCore
+dotnet add package Serilog.Sinks.Console
+dotnet add package Serilog.Sinks.File</code></pre>
+      <pre><code>using Serilog;
+
+Log.Logger = new LoggerConfiguration()
+    .Enrich.FromLogContext()
+    .Enrich.WithProperty("Service", "RestApi")
+    .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} | {RequestPath} | {UserName}{NewLine}{Exception}")
+    .WriteTo.File("logs/restapi-.txt", rollingInterval: RollingInterval.Day)
+    .CreateLogger();
+
+builder.Host.UseSerilog();</code></pre>
+      <h3>4) .NET Runtime metrikleri</h3>
+      <p>CLI: <code>dotnet-counters monitor --process-id &lt;PID&gt;</code> ve <code>dotnet-trace collect --process-id &lt;PID&gt; --format speedscope</code>.</p>
+      <div class="warn">
+        <strong>⚠️ Dikkat / Uyarı:</strong> “Çalışıyor” diye üretimdeki sistemin sağlıklı olduğu söylenmez. İş yükünü simüle etmek, doğru metrikleri toplamak ve p95’i okuma yeteneği şarttır. Özellikle GC çoklu-thread dağılımı, gen0/gen1/gen2 gibi kavramlar günlük operasyonel kararın anahtarıdır.
+      </div>
+    </section>
+
+    <section id="uygulama" class="card lab">
+      <span class="label uyg">UYGULAMA VE ANALİZ (Ne Yapıyoruz?)</span>
+      <h2>Adım adım laboratuvar: RestApi üzerinden gerçek kullanım senaryoları</h2>
+      <ol>
+        <li><strong>İş yükünü başlat:</strong> Projeyi çalıştır. <code>dotnet run --project RestApi/RestApi.csproj</code>.</li>
+        <li><strong>Önce endpointleri tanı:</strong> Bu repo içinde <code>AuthController</code>, <code>NoteController</code>, <code>ProductController</code> üç ana domain akışı sunuyor. Postman JSON dosyası içindeki <code>User Login</code>, <code>User Register</code>, <code>Product Add</code> akışlarını tanı.</li>
+        <li><strong>Jaeger ile bir trace oluştur:</strong> Örnek: <code>POST /api/auth/login</code> çağrısı sonrası JWT production ve user lookup işlemini takip et. Gözün trace içindeki span’lara takılsın.</li>
+        <li><strong>Structured log üret:</strong> <code>GlobalMiddleware</code> içinde mevcut `Console.WriteLine` tarzı log değil, structured log kullan. Kullanıcı, IP, URL, User-Agent, timestamp, operationName ekle.</li>
+        <li><strong>dotnet-counters ile canlı izleme:</strong>
+          <code>dotnet-counters monitor --process-id $(pgrep -f RestApi)</code>
+          ardından <code>System.Runtime</code> sekmesinde CPU, GC Heap Size, Gen0/Gen1/Gen2 gözetimini izle.
+        </li>
+        <li><strong>dotnet-trace ile profil:</strong>
+          <code>dotnet-trace collect --process-id $(pgrep -f RestApi) --format speedscope --output restapi.trace</code>
+          Çıktıdan “hot path” ve çağrı zincirini gör.
+        </li>
+        <li><strong>Rastgele yük simülasyonu:</strong> 20–50 saniyelik concurrency artışı ile <code>api/product</code> ve <code>api/note</code> üzerinden aşırı yük uygula. Latency değişimlerini izleme ekranında not al.</li>
+      </ol>
+
+      <h3>RestApi özelindeki gözlem noktaları</h3>
+      <pre><code>// Program.cs
+builder.Services.AddRateLimiter(...);
+app.UseRateLimiter();
+app.UseMiddleware&lt;GlobalExceptionHandler&gt;();
+app.UseMiddleware&lt;GlobalMiddleware&gt;();
+
+// AuthController.cs
+var existingUser = _context.Users.FirstOrDefault(u =&gt; u.Username == user.Username);
+if (BCrypt.Net.BCrypt.Verify(user.Password, existingUser.Password))
+{
+    var token = tokenHandler.CreateToken(tokenDescriptor);
+    Response.Cookies.Append("X-Access-Token", tokenString, ...);
+}
+
+// NoteController.cs
+var notes = _context.Notes.ToList();
+int i = 1;
+int ii = i / 0; // canlı can yakıcı örnek</code></pre>
+      <p>Bu örnekler, izleme neden kritik olduğunu gösterir: biri operasyonel görünürlüğü, biri güvenlik ve kimlik doğrulamayı, biri de şiddetli hata ve error rate neden önemlidir.</p>
+      <h3>Analiz soruları</h3>
+      <ul>
+        <li>İsteklerin p95’si ne kadar?</li>
+        <li>Hangi endpoint en çok CPU tüketiyor?</li>
+        <li>Hangi sırada Graph/Trace bir “slow span” üretiyor?</li>
+        <li>GC heap artışı kaç saniyede ve hangi çalıştırmada ortaya çıkıyor?</li>
+      </ul>
+    </section>
+
+    <section id="gercek-stack" class="card">
+      <span class="label nasil">BU REPO’DA GERÇEK AKIŞ</span>
+      <h2>Compose, Collector ve RestApi nasıl bağlanıyor?</h2>
+      <p><code>docker-compose.yml</code> PostgreSQL, Seq, OpenTelemetry Collector, Prometheus ve Grafana’yı <code>neominal-net</code> ağına alır. Ancak mevcut <code>RestApi</code>, <code>appsettings.json</code> içindeki <code>Data Source=restapi.db</code> ile SQLite kullanır ve <code>RestApi.csproj</code> içinde OpenTelemetry/Serilog paketleri bulunmaz.</p>
+      <table class="service-table">
+        <thead><tr><th>Bileşen</th><th>Gerçek adres</th><th>Bu projedeki durum</th></tr></thead>
+        <tbody>
+          <tr><td>RestApi</td><td><code>dotnet run</code> ile yerel proses</td><td class="status-gap">/metrics ve OTLP export henüz ekli değil</td></tr>
+          <tr><td>PostgreSQL</td><td><code>localhost:15432</code></td><td class="status-gap">Compose’ta var, RestApi SQLite’a bağlı</td></tr>
+          <tr><td>Seq</td><td><code>http://localhost:8081</code></td><td class="status-gap">Serilog sink bağlantısı kodda yok</td></tr>
+          <tr><td>Collector</td><td><code>localhost:4317/4318</code></td><td class="status-live">OTLP alır; trace’i Jaeger yerine debug’a yazar</td></tr>
+          <tr><td>Grafana</td><td><code>http://localhost:3000</code></td><td class="status-gap">Dashboard var, Prometheus hedefleri RestApi ile eşleşmiyor</td></tr>
+        </tbody>
+      </table>
+      <div class="warn"><strong>Öğretim kararı:</strong> “Gözlem görüyorum” sonucu için RestApi’ye önce OpenTelemetry, Serilog ve Prometheus metrics endpoint’i eklenmelidir. Bu HTML, eklenmiş gibi davranmaz; eksik bağlantıyı görünür kılar.</div>
+      <h3>Çalıştırma sırası</h3>
+      <pre><code>docker compose up -d postgres seq otel-collector prometheus grafana
+dotnet run --project RestApi/RestApi.csproj
+# Grafana: http://localhost:3000
+# Collector health: http://localhost:13133</code></pre>
+      <p>Jaeger UI şu an açılmaz; Compose’ta Jaeger servisi yoktur ve Collector’ın traces pipeline’ı yalnızca <code>debug</code> exporter kullanır. Jaeger anlatımı, servis ve OTLP exporter geri eklendiğinde uygulanacak alternatiftir.</p>
+    </section>
+
+    <section class="card">
+      <span class="label uyg">ETKİLEŞİMLİ KONTROL NOKTASI</span>
+      <h2>Gün 1’i kanıtla</h2>
+      <p>Her satıra tıklayarak tamamlandı işaretleyin. İlerleme bu tarayıcıda saklanır.</p>
+      <div class="progress-wrap"><strong id="progress-label">0 / 6 adım tamamlandı</strong><progress id="progress-bar" value="0" max="6"></progress></div>
+      <div class="control-panel">
+        <button class="active" type="button" data-filter="all">Tüm adımlar</button>
+        <button type="button" data-filter="todo">Bekleyenler</button>
+        <button type="button" data-filter="done">Tamamlananlar</button>
+      </div>
+      <ol class="lab" data-checklist>
+        <li data-step="1"><strong>Altyapıyı aç:</strong> Compose servislerinin durumunu <code>docker compose ps</code> ile doğrula.</li>
+        <li data-step="2"><strong>Uygulamayı çalıştır:</strong> RestApi’nin SQLite bağlantısını ve dinlediği URL’yi logdan doğrula.</li>
+        <li data-step="3"><strong>Akış üret:</strong> Login, Product ve Note endpoint’lerini dene; Note GET’in 500 üretmesini gözlemle.</li>
+        <li data-step="4"><strong>Eksik sinyali tespit et:</strong> Prometheus’ta RestApi için hedef olmadığını ve Collector’a telemetry gitmediğini not et.</li>
+        <li data-step="5"><strong>Enstrümantasyon planı yaz:</strong> ASP.NET Core, HttpClient, EF/SQL, runtime metrics ve OTLP exporter sırasını belirle.</li>
+        <li data-step="6"><strong>Sonucu yorumla:</strong> p95, RPS, 5xx, GC ve thread pool sinyallerini tek olay anlatısında birleştir.</li>
+      </ol>
+    </section>
+
+    <section id="sonuc" class="card">
+      <span class="label sonuc">SONUÇ VE BEST PRACTICE</span>
+      <h2>“İyi görünürlük” bir araç değil; organizasyon kültürüdür.</h2>
+      <div class="best">
+        <strong>💡 Best Practice:</strong>
+        <ul>
+          <li>Her servisin tekil SLO’su olsun: latency, throughput, error rate.</li>
+          <li>Structured logging şart: requestId, userId, tenantId, traceId, spanId.</li>
+          <li>OpenTelemetry + Jaeger + .NET Runtime metric kombinasyonu üretim için vazgeçilmez bir katmandır.</li>
+          <li>Trace ve log id’lerini korelasyon için kullan; tozlu “başarısız bir örnek” kalmaz.</li>
+        </ul>
+      </div>
+      <div class="warn">
+        <strong>⚠️ Dikkat / Uyarı:</strong> Sadece log dosyasına bakmak yetmez. Hata ve latans sinyallerini, CPU, memory, GC ve ağ katmanı ile birleştirmeniz gerekir. Birim iş yükleri altında bile p95 örnekleri tehlikeli olabilir. Ölçüm yapmadan, “geliştirme ortamında iyi” diye üretime güvenmeyin.
+      </div>
+      <h3>Öğrenilen altın kurallar</h3>
+      <ol>
+        <li>İlk iş: doğru metriği seçmek.</li>
+        <li>İkinci iş: sistemin gerçek iş yükünü simüle etmek.</li>
+        <li>Üçüncü iş: p95 ve error rate’i birlikte yorumlamak.</li>
+        <li>Dördüncü iş: kaynak tüketimini “sadece CPU” değil, GC ve thread pool ile okumak.</li>
+      </ol>
+    </section>
+
+    <script>
+      (() => {
+        const key = "net-perform-gun1-checklist";
+        const items = [...document.querySelectorAll("[data-step]")];
+        const saved = JSON.parse(localStorage.getItem(key) || "[]");
+        const label = document.getElementById("progress-label");
+        const bar = document.getElementById("progress-bar");
+        const render = () => { const done = items.filter(item => item.classList.contains("done")).length; label.textContent = `${done} / ${items.length} adım tamamlandı`; bar.value = done; };
+        items.forEach(item => { if (saved.includes(item.dataset.step)) item.classList.add("done"); item.addEventListener("click", () => { item.classList.toggle("done"); localStorage.setItem(key, JSON.stringify(items.filter(i => i.classList.contains("done")).map(i => i.dataset.step))); render(); }); });
+        document.querySelectorAll("[data-filter]").forEach(button => button.addEventListener("click", () => { document.querySelectorAll("[data-filter]").forEach(b => b.classList.remove("active")); button.classList.add("active"); items.forEach(item => { item.hidden = button.dataset.filter === "done" ? !item.classList.contains("done") : button.dataset.filter === "todo" ? item.classList.contains("done") : false; }); }));
+        render();
+      })();
+    </script>
+    <footer>
+      .NET Performance Mastery · Gün 1 · Usta-Çırak Mentorluk Notları
+    </footer>
+  </main>
+</body>
+</html>

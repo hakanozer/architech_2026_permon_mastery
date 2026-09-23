@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>.NET Performance Mastery – Gün 3</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --panel: #ffffff;
+      --panel-alt: #eef3f9;
+      --ink: #1a2433;
+      --muted: #52627a;
+      --line: #d9e2ec;
+      --brand: #0d6efd;
+      --brand-2: #ff7a18;
+      --success: #2e8b57;
+      --warn: #d97706;
+      --danger: #c62828;
+      --code-bg: #0f172a;
+      --shadow: 0 16px 36px rgba(15, 23, 42, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: Inter, "Segoe UI", sans-serif;
+      background: linear-gradient(180deg, #f7f9fc 0%, #eef3f8 100%);
+      color: var(--ink);
+      line-height: 1.7;
+    }
+
+    .container {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 24px 18px 80px;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, #2d3e50, #0d6efd 43%, #ff7a18 100%);
+      color: #fff;
+      padding: 28px 0 48px;
+      box-shadow: var(--shadow);
+    }
+
+    .hero-inner {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 0 18px;
+    }
+
+    .kicker {
+      font-size: 12px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      opacity: 0.9;
+    }
+
+    h1, h2, h3, h4 {
+      line-height: 1.2;
+      margin-top: 0;
+    }
+
+    h1 {
+      font-size: clamp(2.1rem, 3vw, 3.2rem);
+      margin: 12px 0 12px;
+    }
+
+    h2 {
+      font-size: clamp(1.65rem, 2vw, 2.2rem);
+      margin: 28px 0 14px;
+      color: var(--ink);
+      border-bottom: 2px solid var(--line);
+      padding-bottom: 8px;
+    }
+
+    h3 {
+      font-size: 1.2rem;
+      margin: 20px 0 12px;
+      color: var(--ink);
+    }
+
+    .nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin: 12px 0 0;
+    }
+
+    .nav a {
+      text-decoration: none;
+      background: rgba(255,255,255,0.12);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.18);
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      padding: 24px;
+      margin-top: 24px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 18px;
+      margin-top: 18px;
+    }
+
+    .metric {
+      background: var(--panel-alt);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 18px;
+    }
+
+    .metric strong {
+      display: block;
+      font-size: 1.8rem;
+      color: var(--brand);
+    }
+
+    .label {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      margin-bottom: 8px;
+    }
+
+    .label.neden { background: #e0f2fe; color: #0c4a6e; }
+    .label.nedir { background: #fff1db; color: #9a4d00; }
+    .label.nasil { background: #e8f5e9; color: #1b5e20; }
+    .label.uyg { background: #ede9fe; color: #4c1d95; }
+    .label.sonuc { background: #f3e8ff; color: #6b21a8; }
+
+    .best, .warn, .term {
+      margin-top: 18px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      padding: 16px 18px;
+      background: #fff;
+    }
+
+    .best {
+      background: linear-gradient(180deg, #ecfdf5, #f8fffb);
+      border-color: #b7ebc8;
+    }
+
+    .warn {
+      background: linear-gradient(180deg, #fff7ed, #fffdf5);
+      border-color: #f8d99a;
+    }
+
+    .term {
+      background: #f8fafc;
+    }
+
+    details {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      margin-top: 10px;
+      padding: 10px 14px;
+    }
+
+    summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    code, pre {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    }
+
+    pre {
+      white-space: pre-wrap;
+      word-break: break-word;
+      background: var(--code-bg);
+      color: #eaf2ff;
+      border-radius: 14px;
+      padding: 18px;
+      margin: 18px 0 12px;
+      overflow-x: auto;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
+    }
+
+    code {
+      font-size: 0.92rem;
+    }
+
+    .lab ol {
+      margin: 18px 0 0;
+      padding-left: 20px;
+    }
+
+    .lab li {
+      margin-bottom: 14px;
+      padding: 10px 12px;
+      background: #f9fbfd;
+      border-left: 4px solid var(--brand);
+      border-radius: 10px;
+    }
+
+    .lab strong { color: var(--brand); }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 22px;
+    }
+
+    ul, ol { padding-left: 20px; }
+    li { margin-bottom: 8px; }
+
+    footer {
+      margin-top: 40px;
+      border-top: 1px solid var(--line);
+      padding-top: 20px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .course-map, .control-panel { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); margin-top: 18px; }
+    .course-map a, .control-panel button { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: var(--panel-alt); color: var(--ink); text-decoration: none; font: inherit; text-align: left; cursor: pointer; }
+    .course-map a.active, .control-panel button.active { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.12); }
+    .progress-wrap { margin-top: 18px; background: var(--panel-alt); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+    progress { width: 100%; height: 12px; accent-color: var(--success); }
+    .lab li.done { opacity: 0.62; border-left-color: var(--success); }
+    .lab li.done strong::after { content: " ✓"; color: var(--success); }
+    .lab li[data-step] { cursor: pointer; }
+    .repo-fact { border-left: 4px solid var(--brand-2); padding-left: 14px; }
+
+    @media (max-width: 820px) {
+      .two-col { grid-template-columns: 1fr; }
+      .card { padding: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-inner">
+      <div class="kicker">Kurumsal Mentorluk · .NET Performance Mastery</div>
+      <h1>GÜN 3 · Kod Seviyesi Optimizasyon: Code Perf & Memory</h1>
+      <div class="nav">
+        <a href="#neden">Sektörel Bakıș</a>
+        <a href="#nedir">Kavramsal Temel</a>
+        <a href="#nasil">Araç Kurulumu</a>
+        <a href="#uygulama">Uygulama & Analiz</a>
+        <a href="#sonuc">Sonuç & Best Practice</a>
+      </div>
+      <div class="course-map" aria-label="Üç günlük eğitim haritası">
+        <a href="gun1_observability.html">Gün 1 · Görünür Olmak</a>
+        <a href="gun2_debugging_sql.html">Gün 2 · Derinlemesine Teşhis</a>
+        <a class="active" href="gun3_code_perf_memory.html">Gün 3 · Kod Seviyesi Optimizasyon</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section id="neden" class="card">
+      <span class="label neden">SEKTÖREL BAKIŞ (Neden?)</span>
+      <h2>Yavaş kod, aslında hafıza kaybı ve yanlış JIT davranışının ekonomik bir tezahürüdür.</h2>
+      <p>Uygulama “çok yavaş” diye görülmeye başlandığında en büyük hata, sadece HTTP katmanına bakmaktır. gerçek sorun bazen String concatenation, LINQ’i büyütme, tekrar eden allocations, yanlış boxing, kayıt başına gereksiz veri taşıma ve yanlış GC davranışıdır.</p>
+      <div class="grid">
+        <div class="metric"><strong>Gen0</strong><span>Hafıza üretimi ve temizliği için kısa ömürlü nesneler.</span></div>
+        <div class="metric"><strong>Gen1</strong><span>Orta yaşama sahip nesneler; GC sürekliliği için kritik.</span></div>
+        <div class="metric"><strong>Gen2</strong><span>Uzun ömürlü nesneler; genelde yüksek maliyete gider.</span></div>
+      </div>
+      <div class="warn">
+        <strong>⚠️ Dikkat:</strong> Kodun hızlı görünmesi için JIT warmup şarttır. Benchmark yapmadan “bir örnek rüzgar şahitliği” ile karar vermeyin. Aynı kod p50, p95, allocasyon ve GC etkisi farklı olabilir.
+      </div>
+      <div class="best">
+        <strong>💡 Best Practice:</strong> Mikro benchmark yaparken benchmark runner’ın warmup, iteration, iclassify gibi davranışlarını doğru okuyun. Performans bir gecelik hatırdan değil, gerçek ölçümlerden gelir.
+      </div>
+    </section>
+
+    <section id="nedir" class="card">
+      <span class="label nedir">KAVRAMSAL TEMEL (Nedir?)</span>
+      <h2>BenchmarkDotNet, Visual Studio Profiler ve memory leak anlayışı; kodun gölgesinde yürüyen “ölümsüz sorun” çözümleridir.</h2>
+      <p>Yazılım mühendisliği, mobil uygulama performansını değil, “ekonomi” olarak görür: her ek nesne, her exra allocation, her string üretilmesi bir maliyet demektir. İyi mühendis, kodu değil, maliyeti optimizesini bilir.</p>
+      <div class="two-col">
+        <div>
+          <h3>BenchmarkDotNet</h3>
+          <ul>
+            <li>Runtime, JIT, allocations, throughput birlikte görünür.</li>
+            <li>Warmup dönemi gerekir; ilk çalıştırmalar yalancı olabilir.</li>
+            <li>Doğru benchmark için stable environment şarttır.</li>
+          </ul>
+        </div>
+        <div>
+          <h3>VS Profiler</h3>
+          <ul>
+            <li>CPU Usage ; hotspot tespitinde çok güçlüdür.</li>
+            <li>Memory Usage ; allocation ve retention görür.</li>
+            <li>Snapshot ; hangi method’un ne kadar allocation ürettiğini gösterir.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="term">
+        <strong>🔑 Terimler:</strong>
+        <details><summary>JIT Warmup</summary><p>JIT’in ilk çalıştırma sürecinde optimize ettiği ve kodun gerçek performans profilini göstermeden önce kısa bir ısınıp-çalışması gerekir.</p></details>
+        <details><summary>Allocation</summary><p>Heap’e çıkartılan yeni nesneler; yüksek allocation, GC’yi sıkıştırır ve latency’i yükseltir.</p></details>
+        <details><summary>Promotion</summary><p>Gen0’dan Gen1 veya Gen2’ye yükselme, GC baskısını ve gecikmeyi artırır.</p></details>
+      </div>
+    </section>
+
+    <section id="nasil" class="card">
+      <span class="label nasil">ARAÇ KURULUMU VE ARAYÜZ (Nasıl?)</span>
+      <h2>Ölçüm için araçları kurup, doğru menü ve komutları açın.</h2>
+      <h3>1) BenchmarkDotNet kurulumu</h3>
+      <pre><code>dotnet add package BenchmarkDotNet</code></pre>
+      <pre><code>using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Running;
+
+[MemoryDiagnoser]
+public class StringBenchmarks
+{
+    [Benchmark]
+    public string StringPlus()
+    {
+        var value = "A" + "B" + "C";
+        return value;
+    }
+
+    [Benchmark]
+    public string StringBuilderJoin()
+    {
+        var sb = new StringBuilder();
+        sb.Append("A"); sb.Append("B"); sb.Append("C");
+        return sb.ToString();
+    }
+}
+
+BenchmarkRunner.Run&lt;StringBenchmarks&gt;();</code></pre>
+      <h3>2) Visual Studio Profiler</h3>
+      <p>Arayüz: <code>Debug > Performance Profiler...</code> veya <code>Debug > Start Diagnostic Tools Without Debugging</code></p>
+      <ul>
+        <li><strong>CPU Usage</strong> → hotspot bulur.</li>
+        <li><strong>Memory Usage</strong> → allocasyon ve heap artışı izlenir.</li>
+        <li><strong>Snapshot</strong> → bir anda hangi object’lerin heap’te kaldığını görür.</li>
+      </ul>
+      <h3>3) .NET Counters / Trace</h3>
+      <pre><code>dotnet-counters monitor --process-id 1234 --counters System.Runtime
+
+dotnet-trace collect --process-id 1234 --format speedscope --output perf.trace</code></pre>
+      <p>Bu araçlar, profilleme sırasında “hot method” ve GC davranışını anlamak için çok değerlidir.</p>
+    </section>
+
+    <section id="uygulama" class="card lab">
+      <span class="label uyg">UYGULAMA VE ANALİZ (Ne Yapıyoruz?)</span>
+      <h2>Adım adım laboratuvar: gerçek kod üzerinden ölçek ve hafıza farkını çözmek</h2>
+      <ol>
+        <li><strong>Benchmark’i hazırlayın:</strong> Basit ama temsilî kod örneği yazın: string concatenation, LINQ tekrar eden enumeration, büyük list create, deserialization örnekleri.</li>
+        <li><strong>JIT ısınma sürecini anlayın:</strong> Benchmark ilk çalıştırma “bariz hızlı” görünebilir. Warmup ve iteration sayısını doğru ayarlayın. <code>BenchmarkDotNet</code> bunu otomatik yapar ama sen mantığı kavramalısın.</li>
+        <li><strong>CPU Usage ile hotspot bulun:</strong> Visual Studio’da <code>Debug > Performance Profiler > CPU Usage</code> akışı ile servis veya örnek fonksiyon çalıştırılır. Hangi method en çok CPU kullanıyor? Goruntule.</li>
+        <li><strong>Memory Usage ile allocation örneğini görün:</strong> Tekrar eden <code>new object()</code> veya büyük string/byte[] üretimi, heap artışını yaratır. Allocation snapshotı ile “neden GC arada patlıyor?” görülür.</li>
+        <li><strong>Memory leak kontrolü:</strong> Static list, event subscription, long-lived cache, unbounded dictionary bu türe örnektir. Özellikle WinForms/WPF gibi UI or environment, static event subscriptions can leak. In API, singleton cache misconfig is common.</li>
+        <li><strong>Gen0/Gen1/Gen2 promosyonu:</strong> Heap profile’da hangi nesnelerin kısa süre sonra Gen2’ye geçtiğini görün. Burada amaç, “her şey ayrı ayrı işlenmiyor; GC performansı” sorusunu çözmektir.</li>
+      </ol>
+
+      <h3>Örnek micro-benchmark</h3>
+      <pre><code>[MemoryDiagnoser]
+public class ApiPayloadBench
+{
+    private readonly List&lt;Product&gt; _products = Enumerable.Range(1, 10000)
+        .Select(i =&gt; new Product { Id = i, Name = $"P{i}", Price = i * 10 })
+        .ToList();
+
+    [Benchmark]
+    public int SumByLoop()
+    {
+        var total = 0;
+        foreach (var p in _products)
+            total += p.Price;
+        return total;
+    }
+
+    [Benchmark]
+    public int SumByLinq()
+    {
+        return _products.Sum(p =&gt; p.Price);
+    }
+}</code></pre>
+      <p>Bu örnek, “aynı iş ama farklı allocation ve CPU davranışı” farkını gösterir. Çünkü LINQ ve foreach aynı görünse de JIT ve enumerator sürümü farklı olabilir.</p>
+
+      <h3>Bu repo için kritik noktalar</h3>
+      <pre><code>// NoteController.cs
+var notes = _context.Notes.ToList();
+int i = 1;
+int ii = i / 0;
+
+// AuthController.cs
+var existingUser = _context.Users.FirstOrDefault(u =&gt; u.Username == user.Username);
+// Her login için veritabanı erişimi, token üretimi, cookie süreci ve tüm karşılaştırma zinciri</code></pre>
+      <p>Bu iki örnek, sistemin “hızlı çalışan” görünmesine rağmen arka planda wasted CPU / repeated allocations / exception path den kaynaklı maliyet taşıdığını gösterir.</p>
+    </section>
+
+    <section id="repo-perf" class="card">
+      <span class="label nasil">BU REPO’DA PERFORMANS LABORATUVARI</span>
+      <h2>Ölçümün sınırını bil, sonra optimize et</h2>
+      <p class="repo-fact"><code>RestApi.csproj</code> şu anda BenchmarkDotNet veya profiler paketleri içermez. Benchmark sınıfını ayrı bir console/benchmark projesinde çalıştırmak, API’yi ölçüm koduyla kirletmemek için daha doğrudur. API tarafında ölçülecek gerçek yüzeyler <code>ProductController.GetAll()</code>, <code>NoteController.GetAll()</code> ve login sırasında yapılan kullanıcı sorgusudur.</p>
+      <div class="best"><strong>Beklenen hipotez:</strong> Büyük tabloda <code>ToList()</code> ile tüm kayıtları taşımak allocation ve response süresini artırabilir. İlk düzeltme projection, pagination ve uygun index önerisini ölçerek doğrulamaktır; tahmin doğrudan “optimizasyon” değildir.</div>
+      <h3>Benchmark akışı</h3>
+      <p><code>dotnet new console -n RestApi.Benchmarks</code> ile ayrı proje oluşturun, <code>BenchmarkDotNet</code> ekleyin ve <code>dotnet run -c Release</code> ile ölçün. Visual Studio Profiler’da API için <code>CPU Usage</code> ve <code>Memory Usage</code> araçlarını açın.</p>
+      <p>Snapshot’ı tek başına leak kanıtı saymayın: aynı nesnenin iki snapshot arasında tutulduğunu ve kök referansını doğrulayın.</p>
+    </section>
+
+    <section class="card">
+      <span class="label uyg">ETKİLEŞİMLİ KONTROL NOKTASI</span>
+      <h2>Gün 3’ü kapat</h2>
+      <p>Sonuçları ölçüm, kanıt ve tekrar döngüsüyle tamamlayın.</p>
+      <div class="progress-wrap"><strong id="progress-label">0 / 6 adım tamamlandı</strong><progress id="progress-bar" value="0" max="6"></progress></div>
+      <div class="control-panel"><button class="active" type="button" data-filter="all">Tüm adımlar</button><button type="button" data-filter="todo">Bekleyenler</button><button type="button" data-filter="done">Tamamlananlar</button></div>
+      <ol class="lab">
+        <li data-step="1"><strong>Hipotez yaz:</strong> CPU, latency, allocation veya GC’den hangisini iyileştirdiğini belirt.</li>
+        <li data-step="2"><strong>Warmup’u ayır:</strong> BenchmarkDotNet’in warmup ve iteration sonuçlarını birbirine karıştırma.</li>
+        <li data-step="3"><strong>Release ölç:</strong> Debug ve Release sonuçlarını ayrı çalıştır; makine yükünü not et.</li>
+        <li data-step="4"><strong>Snapshot al:</strong> API yükü öncesi ve sonrası Memory Usage snapshot’larını karşılaştır.</li>
+        <li data-step="5"><strong>GC’yi yorumla:</strong> Gen0/Gen1/Gen2 artışı ile allocation kaynağını birlikte izle.</li>
+        <li data-step="6"><strong>Kapanış raporu:</strong> değişiklik, ölçüm, risk ve geri alma planını tek sayfada yaz.</li>
+      </ol>
+    </section>
+
+    <section id="sonuc" class="card">
+      <span class="label sonuc">SONUÇ VE BEST PRACTICE</span>
+      <h2>Optimizasyon derken “daha hızlı” değil, “akıllıca harcanan kaynak” öğreniyorsunuz.</h2>
+      <div class="best">
+        <strong>💡 Best Practice:</strong>
+        <ul>
+          <li>Performans bir teori değil, benchmark ve profiler ile ispatlanan olgudur.</li>
+          <li>Allocation, promotion ve GC davranışı her zaman CPU latency ile birlikte yorumlanmalıdır.</li>
+          <li>Memory leak için static, cache, long-lived object, event handler ve singleton kullanımına dikkat edin.</li>
+          <li>Özellikle API ekosisteminde, dönen object’lerin gereksiz alan kaplamadan serialize edilmesi önemlidir.</li>
+        </ul>
+      </div>
+      <div class="warn">
+        <strong>⚠️ Dikkat / Uyarı:</strong> “Hafıza az” diye optimized kod yazmak anlamına gelmez. Gereksiz derecede sıkı optimization, bakımı daha zor ve hata eğilimli kod üretir. Ölçüm ve hızlı tartışma, sonra fix edin.
+      </div>
+      <h3>Öğrenilen altın kurallar</h3>
+      <ol>
+        <li>Benchmark öncesinde issue tanımla: CPU, memory, throughput, latency hangisi?</li>
+        <li>Mikro benchmark ile JIT warmup ve allocation pattern’i okuyun.</li>
+        <li>VS Profiler ile hotspot ve Gen0/Gen1/Gen2 davranışlarını görselleştirin.</li>
+        <li>Memory leak ve atıl allocation’ları sadece “üstte görülen hata değil, sistemin temel nidası” olarak okuyun.</li>
+      </ol>
+    </section>
+
+    <script>
+      (() => {
+        const key = "net-perform-gun3-checklist";
+        const items = [...document.querySelectorAll("[data-step]")];
+        const saved = JSON.parse(localStorage.getItem(key) || "[]");
+        const label = document.getElementById("progress-label");
+        const bar = document.getElementById("progress-bar");
+        const render = () => { const done = items.filter(item => item.classList.contains("done")).length; label.textContent = `${done} / ${items.length} adım tamamlandı`; bar.value = done; };
+        items.forEach(item => { if (saved.includes(item.dataset.step)) item.classList.add("done"); item.addEventListener("click", () => { item.classList.toggle("done"); localStorage.setItem(key, JSON.stringify(items.filter(i => i.classList.contains("done")).map(i => i.dataset.step))); render(); }); });
+        document.querySelectorAll("[data-filter]").forEach(button => button.addEventListener("click", () => { document.querySelectorAll("[data-filter]").forEach(b => b.classList.remove("active")); button.classList.add("active"); items.forEach(item => { item.hidden = button.dataset.filter === "done" ? !item.classList.contains("done") : button.dataset.filter === "todo" ? item.classList.contains("done") : false; }); }));
+        render();
+      })();
+    </script>
+    <footer>
+      .NET Performance Mastery · Gün 3 · Usta-Çırak Mentorluk Notları
+    </footer>
+  </main>
+</body>
+</html>

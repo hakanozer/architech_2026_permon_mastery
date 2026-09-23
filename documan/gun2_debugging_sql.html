@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>.NET Performance Mastery – Gün 2</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --panel: #ffffff;
+      --panel-alt: #eef3f9;
+      --ink: #1a2433;
+      --muted: #52627a;
+      --line: #d9e2ec;
+      --brand: #0d6efd;
+      --brand-2: #ff7a18;
+      --success: #2e8b57;
+      --warn: #d97706;
+      --danger: #c62828;
+      --code-bg: #0f172a;
+      --shadow: 0 16px 36px rgba(15, 23, 42, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: Inter, "Segoe UI", sans-serif;
+      background: linear-gradient(180deg, #f7f9fc 0%, #eef3f8 100%);
+      color: var(--ink);
+      line-height: 1.7;
+    }
+
+    .container {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 24px 18px 80px;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, #3a1d3a, #7c3aed 42%, #ff7a18 100%);
+      color: #fff;
+      padding: 28px 0 48px;
+      box-shadow: var(--shadow);
+    }
+
+    .hero-inner {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 0 18px;
+    }
+
+    .kicker {
+      font-size: 12px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      opacity: 0.9;
+    }
+
+    h1, h2, h3, h4 {
+      line-height: 1.2;
+      margin-top: 0;
+    }
+
+    h1 {
+      font-size: clamp(2.1rem, 3vw, 3.2rem);
+      margin: 12px 0 12px;
+    }
+
+    h2 {
+      font-size: clamp(1.65rem, 2vw, 2.2rem);
+      margin: 28px 0 14px;
+      color: var(--ink);
+      border-bottom: 2px solid var(--line);
+      padding-bottom: 8px;
+    }
+
+    h3 {
+      font-size: 1.2rem;
+      margin: 20px 0 12px;
+      color: var(--ink);
+    }
+
+    .nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin: 12px 0 0;
+    }
+
+    .nav a {
+      text-decoration: none;
+      background: rgba(255,255,255,0.12);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.18);
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      padding: 24px;
+      margin-top: 24px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 18px;
+      margin-top: 18px;
+    }
+
+    .metric {
+      background: var(--panel-alt);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 18px;
+    }
+
+    .metric strong {
+      display: block;
+      font-size: 1.8rem;
+      color: var(--brand);
+    }
+
+    .label {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      margin-bottom: 8px;
+    }
+
+    .label.neden { background: #e0f2fe; color: #0c4a6e; }
+    .label.nedir { background: #fff1db; color: #9a4d00; }
+    .label.nasil { background: #e8f5e9; color: #1b5e20; }
+    .label.uyg { background: #ede9fe; color: #4c1d95; }
+    .label.sonuc { background: #f3e8ff; color: #6b21a8; }
+
+    .best, .warn, .term {
+      margin-top: 18px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      padding: 16px 18px;
+      background: #fff;
+    }
+
+    .best {
+      background: linear-gradient(180deg, #ecfdf5, #f8fffb);
+      border-color: #b7ebc8;
+    }
+
+    .warn {
+      background: linear-gradient(180deg, #fff7ed, #fffdf5);
+      border-color: #f8d99a;
+    }
+
+    .term {
+      background: #f8fafc;
+    }
+
+    details {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      margin-top: 10px;
+      padding: 10px 14px;
+    }
+
+    summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    code, pre {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    }
+
+    pre {
+      white-space: pre-wrap;
+      word-break: break-word;
+      background: var(--code-bg);
+      color: #eaf2ff;
+      border-radius: 14px;
+      padding: 18px;
+      margin: 18px 0 12px;
+      overflow-x: auto;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
+    }
+
+    code {
+      font-size: 0.92rem;
+    }
+
+    .lab ol {
+      margin: 18px 0 0;
+      padding-left: 20px;
+    }
+
+    .lab li {
+      margin-bottom: 14px;
+      padding: 10px 12px;
+      background: #f9fbfd;
+      border-left: 4px solid var(--brand);
+      border-radius: 10px;
+    }
+
+    .lab strong { color: var(--brand); }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 22px;
+    }
+
+    ul, ol { padding-left: 20px; }
+    li { margin-bottom: 8px; }
+
+    footer {
+      margin-top: 40px;
+      border-top: 1px solid var(--line);
+      padding-top: 20px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .course-map, .control-panel { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); margin-top: 18px; }
+    .course-map a, .control-panel button { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: var(--panel-alt); color: var(--ink); text-decoration: none; font: inherit; text-align: left; cursor: pointer; }
+    .course-map a.active, .control-panel button.active { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.12); }
+    .progress-wrap { margin-top: 18px; background: var(--panel-alt); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+    progress { width: 100%; height: 12px; accent-color: var(--success); }
+    .lab li.done { opacity: 0.62; border-left-color: var(--success); }
+    .lab li.done strong::after { content: " ✓"; color: var(--success); }
+    .lab li[data-step] { cursor: pointer; }
+    .service-table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+    .service-table th, .service-table td { border-bottom: 1px solid var(--line); padding: 10px; text-align: left; vertical-align: top; }
+    .service-table th { color: var(--muted); font-size: 0.85rem; }
+
+    @media (max-width: 820px) {
+      .two-col { grid-template-columns: 1fr; }
+      .card { padding: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-inner">
+      <div class="kicker">Kurumsal Mentorluk · .NET Performance Mastery</div>
+      <h1>GÜN 2 · Derinlemesine Teşhis: Debugging, SQL & Network</h1>
+      <div class="nav">
+        <a href="#neden">Sektörel Bakıș</a>
+        <a href="#nedir">Kavramsal Temel</a>
+        <a href="#nasil">Araç Kurulumu</a>
+        <a href="#uygulama">Uygulama & Analiz</a>
+        <a href="#sonuc">Sonuç & Best Practice</a>
+      </div>
+      <div class="course-map" aria-label="Üç günlük eğitim haritası">
+        <a href="gun1_observability.html">Gün 1 · Görünür Olmak</a>
+        <a class="active" href="gun2_debugging_sql.html">Gün 2 · Derinlemesine Teşhis</a>
+        <a href="gun3_code_perf_memory.html">Gün 3 · Kod Seviyesi Optimizasyon</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section id="neden" class="card">
+      <span class="label neden">SEKTÖREL BAKIŞ (Neden?)</span>
+      <h2>Yavaş SQL ve laçka ayrıştırılmış bir stack, üretimde “saatler” kazandırır.</h2>
+      <p>İş yükü yükselince, yanıt süresi artar; SQL ve ağ katmanı sistemin en büyük ayak sesini çıkarır. N+1 problemi yüzünden aynı tabloya defalarca SQL atıyorsanız, her istek birkaç yüz milisaniye daha çok kaybeder; 10.000 isteklik trafikte bu milyonlarca ek işlem haline gelir.</p>
+      <div class="grid">
+        <div class="metric"><strong>3–10x</strong><span>Temel eşiklerdeki artış; N+1 veya kötü sorgu planları çoğu zaman bunun nedeni olur.</span></div>
+        <div class="metric"><strong>p95</strong><span>SQL katmanında yükselen p95, görsel olarak “uygulama yavaş” algısı üretir.</span></div>
+        <div class="metric"><strong>Timeout</strong><span>Connection pooling ve network latency kombinasyonunda elektronik “durdurucu” operasyon görünür.</span></div>
+      </div>
+      <div class="warn">
+        <strong>⚠️ Dikkat:</strong> “Sorgu çalışıyor” demek, optimizasyon olduğu anlamına gelmez. Eğer aynı veriyi 100 kez çağırıyorsanız, sorgu tek başına hızlı olabilir ama toplam işyükü yıkıcıdır.
+      </div>
+      <div class="best">
+        <strong>💡 Best Practice:</strong> N+1 şapkası takıp, SQL planını herkesin görebileceği şekilde okuyun; bağlantı havuzunu doğru boyutlayın; latency kaynaklarını ağ, DB ve ORM katmanında ayrı ayrı ayırın.
+      </div>
+    </section>
+
+    <section id="nedir" class="card">
+      <span class="label nedir">KAVRAMSAL TEMEL (Nedir?)</span>
+      <h2>WinDbg, SOS, dump, plan okuma; bunlar “kırmızı alarm” değil, “gitmek gereken yolda ışık” tır.</h2>
+      <p>Bir uygulama çöktüğünde, sistemin “deli gibi çalıştığı” anlarda tüm izler kaybolur. Dump, hangisinin bozulduğunu görmek için geri dönüş noktasıdır. SQL sorgu planları ise “neden geriye dönmüyor?” sorusunun en eski ve en doğru cevabıdır.</p>
+      <div class="two-col">
+        <div>
+          <h3>SQL Profiler ve Execution Plan</h3>
+          <ul>
+            <li><strong>Index Seek:</strong> hedef veriye doğru kısa yol.</li>
+            <li><strong>Table Scan:</strong> bütün tabloyu tarar; büyük veride can yakar.</li>
+            <li><strong>Key Lookup:</strong> index var ama ek veri erişimi gerektirir.</li>
+          </ul>
+        </div>
+        <div>
+          <h3>WinDbg + SOS</h3>
+          <ul>
+            <li><code>!analyze -v</code> crash nedenini özetler.</li>
+            <li><code>!clrstack</code> managed call stack görünümünü verir.</li>
+            <li><code>!threads</code> thread state ve deadlock sinyallerini gösterir.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="term">
+        <strong>🔑 Terimler:</strong>
+        <details><summary>N+1</summary><p>Bir ana sorgu döner, ardından her satır için ayrı bir detail sorgusu açılır. Bu, “tek istekte çoklu istek” olarak bilinir.</p></details>
+        <details><summary>Index Seek</summary><p>Index üzerine arama yaparak hedef satıra ulaşır; maliyet düşüktür.</p></details>
+        <details><summary>Table Scan</summary><p>Bütün tablo taranır; yüksek I/O maliyeti doğurur.</p></details>
+      </div>
+    </section>
+
+    <section id="nasil" class="card">
+      <span class="label nasil">ARAÇ KURULUMU VE ARAYÜZ (Nasıl?)</span>
+      <h2>Windows tarafında gerçek teşhis için araçları doğru yerleştirin.</h2>
+      <h3>1) WinDbg kurulumu</h3>
+      <p>Microsoft WinDbg Preview veya WinDbg for Windows SDK üzerinden kurulum. Sonra symbol cache ayarı:</p>
+      <pre><code>.symfix
+.sympath srv*https://msdl.microsoft.com/download/symbols
+.reload</code></pre>
+      <p>Symbol server ile Microsoft kütüphanelerinin stack içindeki çözümünü açarsınız.</p>
+      <h3>2) SOS extension</h3>
+      <pre><code>.loadby sos clr
+!analyze -v
+!clrstack
+!threads
+!dumpheap -stat</code></pre>
+      <h3>3) Memory dump alma</h3>
+      <p>dotnet-dump veya procdump kullanılır:</p>
+      <pre><code>dotnet-dump collect -p 1234 -o dump.dmp
+procdump -ma -w <PID> dump.dmp</code></pre>
+      <p>Sonrasında WinDbg içersinde açılır. Acı gerçek: dump almak, problem tespitini sağlamlaştırır ama yanlış yerdeki dump alıntısı hiçbir şey çözmez.</p>
+      <h3>4) SQL Profiler / SSMS Execution Plan</h3>
+      <p>SSMS <code>Tools > SQL Server Profiler</code> veya Azure Data Studio üzerinden etkinleştirme. Execution plan’da “Actual Execution Plan” açılır. Aşağıdaki patternler önemlidir:</p>
+      <pre><code>SELECT * FROM Products WHERE Price > 1000;
+-- kötü: Clustered Index Scan
+-- iyi: NonClustered Index Seek</code></pre>
+    </section>
+
+    <section id="uygulama" class="card lab">
+      <span class="label uyg">UYGULAMA VE ANALİZ (Ne Yapıyoruz?)</span>
+      <h2>RestApi üzerinde laboratuvar: hata, SQL ve ağ katmanını açığa çıkarmak</h2>
+      <ol>
+        <li><strong>Tehlikeli kodu tespit et:</strong> <code>AuthController.LoginSql</code> içinde raw SQL kullanılıyor. <code>var query = "select * from users where Username = {0} and Password = {1}";</code> ifadesi parametredir ancak saldırı için uygun görülmektedir. Bu, güvenlik ve SQL performans açısından hem nereden bakılacağını hem de neyin yanlış olduğunu öğretir.</li>
+        <li><strong>Injection payload’ı test et:</strong> Postman JSON içindeki <code>User Login Sql</code> çağrısını kullan. Payload: <code>"'; Drop table users; --a@a.com"</code>. Bu, “input dışarı çıktığı anda sistemin güvenliği bozulduğunda” neye benzediğini gösterir.</li>
+        <li><strong>SSMS/SQLite kontrolü:</strong> Bu repo SQLite kullanıyor. Hatta SQL injection örnekleri SQLite üzerinden benzetilse de kavram birebir aynıdır. Hedef: parameterized query ve prepared statement mantığı.</li>
+        <li><strong>N+1 ve ilişkilendirme senaryosu:</strong> <code>NoteController</code> ve <code>User</code> ilişkisi gibi modelde, eğer tek tek user/notes yükleniyorsa, her note için ayrı query oluşturulabilir. <code>_context.Notes.ToList()</code> tek başına yetmez. Üzerine Include ve projection ekle.</li>
+        <li><strong>Dump alma senaryosu:</strong> “Kırılma” için bir örnek üret: `NoteController.GetAll()` içinde <code>int ii = i / 0;</code> çalışma sebebiyle 500 hatası üretilir. Bu, GlobalExceptionHandler üzerinden loglanır. Özellikle `Exception` log içindeki `Request.Path`, `RemoteIpAddress`, `User` ve `ErrorId` değerleri teşhis için önemlidir.</li>
+        <li><strong>Thread ve memory kontrolü:</strong> dotnet-dump ile prosesin “uykulu” ya da “kötü durumda” olduğu görselde durum netleşir. <code>!clrstack</code> ile hangi thread neden kilitlenmiş bakılır.</li>
+      </ol>
+
+      <h3>Örnek kod: güvenli SQL</h3>
+      <pre><code>var username = userDto.Username;
+var password = userDto.Password;
+
+var user = await _context.Users
+    .FirstOrDefaultAsync(u =&gt; u.Username == username && u.PasswordHash == passwordHash);
+
+// kötü örnek:
+var query = "select * from users where Username = '" + username + "' and Password = '" + password + "'";
+// güvenli örnek:
+var safe = _context.Users.FromSqlInterpolated($@"SELECT * FROM Users WHERE Username = {username} AND Password = {password}");</code></pre>
+      <p>Burada amaç, filtreleme katmanında “kullanıcı girişi doğrudan string birleştirme ile SQL’e gitmesin” dersini vermektir.</p>
+      <h3>Network Latency ve Connection Pooling</h3>
+      <pre><code>services.AddDbContext&lt;ApplicationDbContext&gt;(options =&gt;
+    options.UseSqlite(connectionString)
+           .EnableDetailedErrors()
+           .EnableSensitiveDataLogging());</code></pre>
+      <p>Bağlantı havuzu, DB bağlantı açma-kapama maliyetini minimize eder. Ama yanlış konfigürasyon, çok fazla connection open/close döngüsü, ağ gecikmesi gibi sorunlara yol açar. Bu yüzden ağ, db, app katmanında ayrı ayrı izleme yapılmalıdır.</p>
+    </section>
+
+    <section id="gercek-senaryo" class="card">
+      <span class="label nasil">BU REPO’DA TEŞHİS SINIRI</span>
+      <h2>SQL ve dump adımlarını doğru ortamda çalıştır</h2>
+      <p>Bu RestApi’nin veri sağlayıcısı <code>Microsoft.EntityFrameworkCore.Sqlite</code>; bağlantı <code>Data Source=restapi.db</code>. Compose PostgreSQL başlatsa da uygulama ona bağlanmaz. Mevcut repo için SQLite sorgu logları ve EF Core komutları kullanılmalıdır.</p>
+      <div class="warn"><strong>Güvenlik sınırı:</strong> SQL injection payload’ını çalıştırmayın. String birleştirme yerine LINQ parametreleştirmesinin SQL logundaki farkını gözlemleyin.</div>
+      <h3>Gerçek hata akışı</h3>
+      <pre><code>GET /api/note
+NoteController.GetAll() -> int ii = i / 0
+GlobalExceptionHandler -> 500 + ErrorId + sunucu logu</code></pre>
+      <p><code>GlobalMiddleware</code> şu anda <code>Console.WriteLine</code> kullanır; Serilog/Seq korelasyonu kurulmuş değildir. Dump alma, <code>dotnet-dump</code> ile yerel proses için yapılabilir; WinDbg/SOS ise Windows üzerinde offline analiz adımıdır.</p>
+    </section>
+
+    <section class="card">
+      <span class="label uyg">ETKİLEŞİMLİ KONTROL NOKTASI</span>
+      <h2>Gün 2’yi kanıtla</h2>
+      <p>Adımları tamamladıkça tıklayın; durum bu tarayıcıda korunur.</p>
+      <div class="progress-wrap"><strong id="progress-label">0 / 6 adım tamamlandı</strong><progress id="progress-bar" value="0" max="6"></progress></div>
+      <div class="control-panel"><button class="active" type="button" data-filter="all">Tüm adımlar</button><button type="button" data-filter="todo">Bekleyenler</button><button type="button" data-filter="done">Tamamlananlar</button></div>
+      <ol class="lab">
+        <li data-step="1"><strong>Katmanı seç:</strong> Uygulamanın SQLite kullandığını, Compose PostgreSQL’in ayrı kaldığını doğrula.</li>
+        <li data-step="2"><strong>Hata üret:</strong> Note GET çağrısındaki 500 yanıtını ve ErrorId’yi kaydet.</li>
+        <li data-step="3"><strong>SQL’i gözle:</strong> EF Core log seviyesini açıp parametreli sorguyu incele.</li>
+        <li data-step="4"><strong>Dump al:</strong> Proses PID’siyle dump oluştur; üretimde değil, kontrollü ortamda çalış.</li>
+        <li data-step="5"><strong>Stack oku:</strong> <code>clrstack</code> çıktısında controller ve exception yolunu bul.</li>
+        <li data-step="6"><strong>Planla:</strong> N+1, index ve connection pooling teşhisini kullanılacak gerçek veritabanına göre seç.</li>
+      </ol>
+    </section>
+
+    <section id="sonuc" class="card">
+      <span class="label sonuc">SONUÇ VE BEST PRACTICE</span>
+      <h2>İsabetli teşhis, hızlı çözümün anahtarıdır.</h2>
+      <div class="best">
+        <strong>💡 Best Practice:</strong>
+        <ul>
+          <li>SQL’de plan okuma alışkanlığı geliştirin: Seek vs Scan, index, key lookup.</li>
+          <li>ORM içinde N+1’i “include + projection + batching” ile kırın.</li>
+          <li>Dump alma prosedürünü hazır tutun; “on call” zorlandığında bu tekniğin ne işe yaradığını bilin.</li>
+          <li>Connection pooling, network latency ve application thread state’i ayrı ayrı izleyin.</li>
+        </ul>
+      </div>
+      <div class="warn">
+        <strong>⚠️ Dikkat / Uyarı:</strong> Dump almak için prosesin canlı çalıştığı sürede “sıfır üretim analizi” yapmayın. Dump alırken process donabilir, stack kaybolabilir; bunun için uygun saat ve süreç planlaması gerekir.
+      </div>
+      <h3>Öğrenilen altın kurallar</h3>
+      <ol>
+        <li>Hata üzerinde çökmek yerine, hangi katmanda bozulduğunu ayırın.</li>
+        <li>Plan okumadan sorguyu optimize etmeyin.</li>
+        <li>“Hızlı fix” yerine, sorunun kök nedenine inin.</li>
+        <li>Dump ve stack, debug’in “ölüme rağmen konuşan” kanıtı olur.</li>
+      </ol>
+    </section>
+
+    <script>
+      (() => {
+        const key = "net-perform-gun2-checklist";
+        const items = [...document.querySelectorAll("[data-step]")];
+        const saved = JSON.parse(localStorage.getItem(key) || "[]");
+        const label = document.getElementById("progress-label");
+        const bar = document.getElementById("progress-bar");
+        const render = () => { const done = items.filter(item => item.classList.contains("done")).length; label.textContent = `${done} / ${items.length} adım tamamlandı`; bar.value = done; };
+        items.forEach(item => { if (saved.includes(item.dataset.step)) item.classList.add("done"); item.addEventListener("click", () => { item.classList.toggle("done"); localStorage.setItem(key, JSON.stringify(items.filter(i => i.classList.contains("done")).map(i => i.dataset.step))); render(); }); });
+        document.querySelectorAll("[data-filter]").forEach(button => button.addEventListener("click", () => { document.querySelectorAll("[data-filter]").forEach(b => b.classList.remove("active")); button.classList.add("active"); items.forEach(item => { item.hidden = button.dataset.filter === "done" ? !item.classList.contains("done") : button.dataset.filter === "todo" ? item.classList.contains("done") : false; }); }));
+        render();
+      })();
+    </script>
+    <footer>
+      .NET Performance Mastery · Gün 2 · Usta-Çırak Mentorluk Notları
+    </footer>
+  </main>
+</body>
+</html>
