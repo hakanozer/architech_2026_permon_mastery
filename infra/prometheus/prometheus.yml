@@ -1,0 +1,50 @@
+# Modül 1 - "Merkezi Loglama ve Gözlemlenebilirlik Zinciri"
+# Prometheus, her mikroservisin /metrics endpoint'ini periyodik olarak scrape eder.
+#
+# Her servis için İKİ hedef tanımlıdır: biri servis Docker container'ında
+# çalışırken (container adıyla), diğeri servis host makinede "dotnet run" ile
+# çalışırken (host.docker.internal ile) kullanılır. Hangi mod aktifse o
+# hedef "UP", diğeri "DOWN" görünür — bu normaldir, hata değildir
+# (bkz. docs/Yerel-Ortamda-Calistirma.md).
+global:
+  scrape_interval: 10s
+
+scrape_configs:
+  - job_name: 'order-api'
+    static_configs:
+      - targets: ['order-api:8080']
+        labels: { mode: 'docker' }
+      - targets: ['host.docker.internal:5001']
+        labels: { mode: 'local' }
+
+  - job_name: 'payment-api'
+    static_configs:
+      - targets: ['payment-api:8080']
+        labels: { mode: 'docker' }
+      - targets: ['host.docker.internal:5002']
+        labels: { mode: 'local' }
+
+  - job_name: 'inventory-api'
+    static_configs:
+      - targets: ['inventory-api:8080']
+        labels: { mode: 'docker' }
+      - targets: ['host.docker.internal:5003']
+        labels: { mode: 'local' }
+
+  - job_name: 'api-gateway'
+    static_configs:
+      - targets: ['api-gateway:8080']
+        labels: { mode: 'docker' }
+      - targets: ['host.docker.internal:8080']
+        labels: { mode: 'local' }
+
+  - job_name: 'job-service'
+    static_configs:
+      - targets: ['job-service:8080']
+        labels: { mode: 'docker' }
+      - targets: ['host.docker.internal:5010']
+        labels: { mode: 'local' }
+
+  # NOT: "consul" job'u bu "net-perform" setinden kaldırıldı — Consul servisi
+  # bu compose'da yok ve local-mode karşılığı da olmadığı için sürekli
+  # "DOWN" görünen anlamsız bir hedef olurdu.

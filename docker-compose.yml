@@ -1,0 +1,138 @@
+name: net-perform
+
+# ============================================================================
+# net-perform — Sadeleştirilmiş gözlemlenebilirlik/performans altyapısı
+#
+# Orijinal docker-compose.infra.yml'den TÜRETİLMİŞTİR. Aşağıdaki servisler
+# BİLİNÇLİ OLARAK ÇIKARILDI (sadece performans/gözlemlenebilirlik odaklı bir
+# alt küme isteniyor): redis, kafka, kafka-ui, vault, keycloak, consul,
+# rabbitmq, nginx, jaeger.
+#
+# NOT (jaeger hakkında): otel-collector, trace'leri normalde jaeger'a
+# gönderiyordu (otlp_grpc/jaeger exporter). Jaeger bu sette olmadığı için
+# otel-collector-config.yaml'daki jaeger exporter'ı kaldırdım — aksi halde
+# collector "connection refused" hatasıyla trace pipeline'ında sürekli
+# hata loglar (metrics/log pipeline'ları etkilenmez). Trace görüntülemeniz
+# gerekirse jaeger servisini geri eklemeniz ve config'e otlp_grpc/jaeger
+# exporter'ını tekrar eklemeniz gerekir.
+#
+# Container isimlerine, talep edildiği gibi "permon-" ön eki eklendi
+# (örn. neominal-postgres -> permon-neominal-postgres). SERVİS adları
+# (postgres, seq, otel-collector, prometheus, grafana) DEĞİŞMEDİ — Docker
+# Compose içi DNS çözümlemesi (örn. "http://prometheus:9090") servis adı
+# üzerinden çalışır, container_name'den etkilenmez. Bu yüzden provisioning
+# dosyalarında (grafana datasource, prometheus.yml) herhangi bir adres
+# güncellemesi GEREKMEDİ.
+# ============================================================================
+
+networks:
+  neominal-net:
+    driver: bridge
+    name: neominal-net
+
+volumes:
+  postgres-data:
+  seq-data:
+  otel-collector-data:
+  prometheus-data:
+  grafana-data:
+
+services:
+  # ----------------------------------------------------------------
+  # PostgreSQL - Uygulama veritabanı
+  # ----------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: permon-neominal-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: neominal_demo
+      POSTGRES_USER: neominal
+      POSTGRES_PASSWORD: neominal_pass
+    ports:
+      - '15432:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./infra/postgres/init-multiple-dbs.sh:/docker-entrypoint-initdb.d/init-multiple-dbs.sh
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U neominal -d neominal_demo']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - neominal-net
+
+  # ----------------------------------------------------------------
+  # Seq - Serilog structured log sink + arama arayüzü
+  # ----------------------------------------------------------------
+  seq:
+    image: datalust/seq:latest
+    container_name: permon-neominal-seq
+    restart: unless-stopped
+    environment:
+      ACCEPT_EULA: 'Y'
+      SEQ_FIRSTRUN_ADMINPASSWORD: ${SEQ_ADMIN_PASSWORD}
+    ports:
+      - '5341:5341' # Serilog ingestion endpoint
+      - '8081:80' # Seq Web UI
+    volumes:
+      - seq-data:/data
+    networks:
+      - neominal-net
+
+  # ----------------------------------------------------------------
+  # OpenTelemetry Collector - Trace/Metric aggregator
+  # ----------------------------------------------------------------
+  otel-collector:
+    image: otel/opentelemetry-collector:latest
+    container_name: permon-neominal-otel-collector
+    restart: unless-stopped
+    command: ['--config=/etc/otel-collector-config.yaml']
+    volumes:
+      - ./infra/otel-collector/otel-collector-config.yaml:/etc/otel-collector-config.yaml
+      - otel-collector-data:/var/lib/otel-collector
+    ports:
+      - '4317:4317' # OTLP gRPC receiver (← .NET buradan gönderir)
+      - '4318:4318' # OTLP HTTP receiver
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:13133/']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - neominal-net
+
+  # ----------------------------------------------------------------
+  # Prometheus - Metrik toplama
+  # ----------------------------------------------------------------
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: permon-neominal-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - '9090:9090'
+    extra_hosts:
+      - 'host.docker.internal:host-gateway' # Linux'ta host.docker.internal çözümlemesi için
+    networks:
+      - neominal-net
+
+  # ----------------------------------------------------------------
+  # Grafana - Metrik görselleştirme (Prometheus datasource ile)
+  # ----------------------------------------------------------------
+  grafana:
+    image: grafana/grafana:latest
+    container_name: permon-neominal-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+    ports:
+      - '3000:3000'
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning
+    networks:
+      - neominal-net
