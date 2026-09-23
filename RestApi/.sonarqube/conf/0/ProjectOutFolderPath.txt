@@ -1,0 +1,1 @@
+/Users/hakan/Documents/flo_2025_dotnet/RestApi/.sonarqube/out/0

@@ -1,0 +1,316 @@
+{
+  "info": {
+    "_postman_id": "74b3b5b7-5838-417a-9b8b-c48d7009061c",
+    "name": "architech_2026_permon_mastery",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "1939021",
+    "_collection_link": "https://go.postman.co/collection/1939021-74b3b5b7-5838-417a-9b8b-c48d7009061c?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "User Login",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"Username\": \"hasan@mail.com\",\n    \"Password\": \"12345\",\n    \"City\": \"ankara\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:5120/api/auth/login",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5120",
+          "path": [
+            "api",
+            "auth",
+            "login"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "User Login Sql",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"Username\": \"'; Drop table users; --a@a.com\",\n    \"Password\": \"23423423\",\n    \"City\": \"ankara\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:5120/api/auth/LoginSql",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5120",
+          "path": [
+            "api",
+            "auth",
+            "LoginSql"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "User Register",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"Username\": \"zehra@mail.com\",\n    \"Password\": \"12345\",\n    \"Role\": \"Product\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:5120/api/auth/register",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5120",
+          "path": [
+            "api",
+            "auth",
+            "register"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Product List",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:5120/api/product",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5120",
+          "path": [
+            "api",
+            "product"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Product Add",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{jwt}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"Name\": \"Samsung XX1\",\n    \"Price\": 35000\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:5120/api/product",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5120",
+          "path": [
+            "api",
+            "product"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Product Update",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{jwt}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "PUT",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"Name\": \"TVX\",\n    \"Price\": 13000\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:5120/api/product/1",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5120",
+          "path": [
+            "api",
+            "product",
+            "1"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Add Note",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "",
+            "value": "",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"Content\": \"Veli Toplantı Note\",\n    \"User\": {\n        \"Username\": \"ali@mail.com\",\n        \"Password\": \"12345\"\n    }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:5120/api/note/",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5120",
+          "path": [
+            "api",
+            "note",
+            ""
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Note List",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:5120/api/note/",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5120",
+          "path": [
+            "api",
+            "note",
+            ""
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "hepsiburada.com",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "https://www.hepsiburada.com/api/v1/navigation/1711",
+          "protocol": "https",
+          "host": [
+            "www",
+            "hepsiburada",
+            "com"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "navigation",
+            "1711"
+          ]
+        }
+      },
+      "response": []
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "jwt",
+      "value": ""
+    }
+  ]
+}
