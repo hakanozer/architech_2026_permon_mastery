@@ -4,10 +4,10 @@ namespace RestApi.CustomValids
 {
     public class CityValid : ValidationAttribute
     {
-        protected override ValidationResult IsValid(object? value, ValidationContext validationContext)
+        protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
         {
             string[] validCities = { "istanbul", "ankara", "izmir" };
-            if (validCities.Contains(value?.ToString()!.ToLower()))
+            if (value != null && validCities.Contains(value.ToString()!.ToLower()))
             {
                 return ValidationResult.Success;
             }

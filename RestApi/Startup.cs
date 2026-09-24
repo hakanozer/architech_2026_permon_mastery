@@ -10,7 +10,11 @@ public class Startup
     {
         // appsettings.json'den JWT anahtarını oku
         IConfiguration configuration = services.BuildServiceProvider().GetRequiredService<IConfiguration>();
-        var key = Encoding.ASCII.GetBytes(configuration["Jwt:Key"]);
+        var jwtKeyValue = configuration["Jwt:Key"];
+        if (string.IsNullOrEmpty(jwtKeyValue))
+            throw new InvalidOperationException("Jwt:Key configuration is missing");
+
+        var key = Encoding.ASCII.GetBytes(jwtKeyValue);
         services.AddAuthentication(x =>
         {
             x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;

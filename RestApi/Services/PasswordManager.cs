@@ -27,16 +27,19 @@ namespace RestApi.Services
                 // Swallow and continue with default key if configuration not available
             }
 
-            using (var deriveBytes = new Rfc2898DeriveBytes(
-                _secretKey,
-                new byte[] { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08 },
-                10000, // Önerilen minimum yineleme sayısı
-                HashAlgorithmName.SHA256 // Daha güvenli bir karma algoritması
-            ))
-            {
-                _key = deriveBytes.GetBytes(32); // 256-bit key
-                _iv = deriveBytes.GetBytes(16);  // 128-bit IV
-            }
+            // Using Pbkdf2 (recommended replacement for Rfc2898DeriveBytes)
+            byte[] salt = new byte[] { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08 };
+            int iterations = 10000;
+            int keyLength = 32; // 256-bit key
+            int ivLength = 16;  // 128-bit IV
+
+            byte[] derivedKeyAndIv = Pbkdf2Helper.DeriveKeyMaterial(_secretKey, salt, iterations, keyLength + ivLength);
+
+            _key = new byte[keyLength];
+            _iv = new byte[ivLength];
+
+            Array.Copy(derivedKeyAndIv, 0, _key, 0, keyLength);
+            Array.Copy(derivedKeyAndIv, keyLength, _iv, 0, ivLength);
         }
 
 
@@ -114,5 +117,19 @@ namespace RestApi.Services
         return Convert.ToBase64String(key);
     }
 
+    /// <summary>
+    /// Static helper class for PBKDF2 key derivation
+    /// </summary>
+    private static class Pbkdf2Helper
+    {
+        public static byte[] DeriveKeyMaterial(string password, byte[] salt, int iterations, int outputLength)
+        {
+            // Using Rfc2898DeriveBytes for key derivation (compatible with .NET 10)
+            using (var rfc2898 = new Rfc2898DeriveBytes(password, salt, iterations, HashAlgorithmName.SHA256))
+            {
+                return rfc2898.GetBytes(outputLength);
+            }
+        }
+    }
 }
 }

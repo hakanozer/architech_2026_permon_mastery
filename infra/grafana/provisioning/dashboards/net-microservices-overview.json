@@ -1,93 +1,39 @@
 {
-  "title": ".NET Permon - Genel Bakış",
-  "uid": "nmm-overview",
-  "timezone": "browser",
+  "title": ".NET REST API Observability v3",
+  "id": 100000,
+  "uid": "net-perform-overview-v3",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
   "refresh": "10s",
-  "time": { "from": "now-15m", "to": "now" },
+  "time": { "from": "now-1h", "to": "now" },
   "templating": {
     "list": [
-      {
-        "name": "job",
-        "type": "query",
-        "datasource": { "type": "prometheus", "uid": "Prometheus" },
-        "query": "label_values(up, job)",
-        "refresh": 2,
-        "includeAll": true,
-        "multi": true,
-        "current": { "text": "All", "value": "$__all" }
-      }
+      { "name": "service", "type": "query", "datasource": { "type": "prometheus", "uid": "Prometheus" }, "query": "label_values(up, service_name)", "includeAll": true, "multi": true },
+      { "name": "instance", "type": "query", "datasource": { "type": "prometheus", "uid": "Prometheus" }, "query": "label_values(up{service_name=~\"$service\"}, instance)", "includeAll": true, "multi": true },
+      { "name": "method", "type": "query", "datasource": { "type": "prometheus", "uid": "Prometheus" }, "query": "label_values(restapi_http_request_count_total, http_request_method)", "includeAll": true, "multi": true },
+      { "name": "status", "type": "query", "datasource": { "type": "prometheus", "uid": "Prometheus" }, "query": "label_values(restapi_http_request_count_total, http_response_status_code)", "includeAll": true, "multi": true }
     ]
   },
   "panels": [
-    {
-      "id": 1,
-      "title": "Servis Durumu (up)",
-      "type": "stat",
-      "gridPos": { "h": 4, "w": 24, "x": 0, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "Prometheus" },
-      "targets": [
-        { "expr": "up{job=~\"$job\"}", "legendFormat": "{{job}}" }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "mappings": [
-            { "type": "value", "options": { "0": { "text": "DOWN", "color": "red" } } },
-            { "type": "value", "options": { "1": { "text": "UP", "color": "green" } } }
-          ]
-        }
-      }
-    },
-    {
-      "id": 2,
-      "title": "İstek Oranı (RPS) — http_server_request_duration_seconds_count",
-      "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
-      "datasource": { "type": "prometheus", "uid": "Prometheus" },
-      "targets": [
-        {
-          "expr": "sum by (job) (rate(http_server_request_duration_seconds_count{job=~\"$job\"}[1m]))",
-          "legendFormat": "{{job}}"
-        }
-      ]
-    },
-    {
-      "id": 3,
-      "title": "İstek Süresi p95 (saniye)",
-      "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
-      "datasource": { "type": "prometheus", "uid": "Prometheus" },
-      "targets": [
-        {
-          "expr": "histogram_quantile(0.95, sum by (le, job) (rate(http_server_request_duration_seconds_bucket{job=~\"$job\"}[5m])))",
-          "legendFormat": "{{job}} p95"
-        }
-      ]
-    },
-    {
-      "id": 4,
-      "title": "Hata Oranı (5xx yanıtlar)",
-      "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
-      "datasource": { "type": "prometheus", "uid": "Prometheus" },
-      "targets": [
-        {
-          "expr": "sum by (job) (rate(http_server_request_duration_seconds_count{job=~\"$job\", http_response_status_code=~\"5..\"}[1m]))",
-          "legendFormat": "{{job}} 5xx"
-        }
-      ]
-    },
-    {
-      "id": 5,
-      "title": ".NET GC Heap Boyutu (bytes)",
-      "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
-      "datasource": { "type": "prometheus", "uid": "Prometheus" },
-      "targets": [
-        {
-          "expr": "process_runtime_dotnet_gc_heap_size_bytes{job=~\"$job\"}",
-          "legendFormat": "{{job}}"
-        }
-      ]
-    }
-  ]
+    { "id": 1, "type": "row", "title": "API Overview", "gridPos": { "x": 0, "y": 0, "w": 24, "h": 1 } },
+    { "id": 2, "type": "stat", "title": "API Up", "gridPos": { "x": 0, "y": 1, "w": 6, "h": 4 }, "datasource": { "type": "prometheus", "uid": "Prometheus" }, "targets": [ { "expr": "max(up{service_name=~\"$service\",instance=~\"$instance\"})" } ] },
+    { "id": 3, "type": "timeseries", "title": "Request Rate", "gridPos": { "x": 6, "y": 1, "w": 9, "h": 8 }, "datasource": { "type": "prometheus", "uid": "Prometheus" }, "targets": [ { "expr": "sum by (service_name) (rate(restapi_http_request_count_total{service_name=~\"$service\",instance=~\"$instance\",http_request_method=~\"$method\",http_response_status_code=~\"$status\"}[5m]))", "legendFormat": "{{service_name}}" } ] },
+    { "id": 4, "type": "timeseries", "title": "Request Duration p95", "gridPos": { "x": 15, "y": 1, "w": 9, "h": 8 }, "datasource": { "type": "prometheus", "uid": "Prometheus" }, "targets": [ { "expr": "histogram_quantile(0.95, sum by (le, service_name) (rate(restapi_http_request_duration_seconds_bucket{service_name=~\"$service\",instance=~\"$instance\"}[5m])))", "legendFormat": "{{service_name}}" } ] },
+    { "id": 5, "type": "timeseries", "title": "Error Rate", "gridPos": { "x": 0, "y": 9, "w": 8, "h": 8 }, "datasource": { "type": "prometheus", "uid": "Prometheus" }, "targets": [ { "expr": "sum(rate(restapi_http_request_count_total{service_name=~\"$service\",http_response_status_code=~\"5..\"}[5m])) / clamp_min(sum(rate(restapi_http_request_count_total{service_name=~\"$service\"}[5m])), 1)", "legendFormat": "5xx" } ] },
+    { "id": 6, "type": "timeseries", "title": "HTTP Status Codes", "gridPos": { "x": 8, "y": 9, "w": 8, "h": 8 }, "datasource": { "type": "prometheus", "uid": "Prometheus" }, "targets": [ { "expr": "sum by (http_response_status_code) (rate(restapi_http_request_count_total{service_name=~\"$service\"}[5m]))", "legendFormat": "{{http_response_status_code}}" } ] },
+    { "id": 7, "type": "timeseries", "title": "Active Requests", "gridPos": { "x": 16, "y": 9, "w": 8, "h": 8 }, "datasource": { "type": "prometheus", "uid": "Prometheus" }, "targets": [ { "expr": "sum by (service_name) (restapi_http_active_requests{service_name=~\"$service\"})", "legendFormat": "{{service_name}}" } ] },
+    { "id": 8, "type": "row", "title": ".NET Runtime and Process", "gridPos": { "x": 0, "y": 17, "w": 24, "h": 1 } },
+    { "id": 9, "type": "timeseries", "title": "CPU Usage", "gridPos": { "x": 0, "y": 18, "w": 8, "h": 8 }, "datasource": { "type": "prometheus", "uid": "Prometheus" }, "targets": [ { "expr": "sum by (service_name) (rate(process_cpu_time_seconds_total{service_name=~\"$service\"}[5m]))", "legendFormat": "{{service_name}}" } ] },
+    { "id": 10, "type": "timeseries", "title": "Memory Usage", "gridPos": { "x": 8, "y": 18, "w": 8, "h": 8 }, "datasource": { "type": "prometheus", "uid": "Prometheus" }, "targets": [ { "expr": "process_resident_memory_bytes{service_name=~\"$service\"}", "legendFormat": "{{service_name}}" } ] },
+    { "id": 11, "type": "timeseries", "title": "GC Heap and Collections", "gridPos": { "x": 16, "y": 18, "w": 8, "h": 8 }, "datasource": { "type": "prometheus", "uid": "Prometheus" }, "targets": [ { "expr": "dotnet_gc_heap_size_bytes{service_name=~\"$service\"}", "legendFormat": "heap {{service_name}}" }, { "expr": "rate(dotnet_gc_collections_count_total{service_name=~\"$service\"}[5m])", "legendFormat": "collections {{service_name}}" } ] },
+    { "id": 12, "type": "timeseries", "title": "Thread Pool", "gridPos": { "x": 0, "y": 26, "w": 8, "h": 8 }, "datasource": { "type": "prometheus", "uid": "Prometheus" }, "targets": [ { "expr": "dotnet_thread_pool_thread_count{service_name=~\"$service\"}", "legendFormat": "threads" }, { "expr": "dotnet_thread_pool_queue_length{service_name=~\"$service\"}", "legendFormat": "queue" } ] },
+    { "id": 13, "type": "timeseries", "title": "Runtime and Exceptions", "gridPos": { "x": 8, "y": 26, "w": 8, "h": 8 }, "datasource": { "type": "prometheus", "uid": "Prometheus" }, "targets": [ { "expr": "rate(dotnet_gc_pause_time_seconds_total{service_name=~\"$service\"}[5m])", "legendFormat": "GC pause" }, { "expr": "rate(dotnet_exceptions_count_total{service_name=~\"$service\"}[5m])", "legendFormat": "exceptions" } ] },
+    { "id": 14, "type": "timeseries", "title": "PostgreSQL Metrics", "gridPos": { "x": 16, "y": 26, "w": 8, "h": 8 }, "datasource": { "type": "prometheus", "uid": "Prometheus" }, "targets": [ { "expr": "pg_up", "legendFormat": "up" }, { "expr": "pg_stat_database_numbackends{datname=\"neominal_demo\"}", "legendFormat": "connections" }, { "expr": "rate(pg_stat_database_xact_commit{datname=\"neominal_demo\"}[5m])", "legendFormat": "commits" } ] },
+    { "id": 15, "type": "row", "title": "OpenTelemetry Collector", "gridPos": { "x": 0, "y": 34, "w": 24, "h": 1 } },
+    { "id": 16, "type": "timeseries", "title": "Collector Telemetry", "gridPos": { "x": 0, "y": 35, "w": 12, "h": 8 }, "datasource": { "type": "prometheus", "uid": "Prometheus" }, "targets": [ { "expr": "rate(otelcol_receiver_accepted_spans_total[5m])", "legendFormat": "accepted spans" }, { "expr": "rate(otelcol_exporter_sent_spans_total[5m])", "legendFormat": "sent spans" } ] },
+    { "id": 17, "type": "timeseries", "title": "Collector Export Failures", "gridPos": { "x": 12, "y": 35, "w": 12, "h": 8 }, "datasource": { "type": "prometheus", "uid": "Prometheus" }, "targets": [ { "expr": "rate(otelcol_exporter_send_failed_spans_total[5m])", "legendFormat": "failed spans" }, { "expr": "rate(otelcol_exporter_send_failed_metric_points_total[5m])", "legendFormat": "failed metrics" } ] }
+  ],
+  "annotations": { "list": [] },
+  "links": []
 }

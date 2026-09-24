@@ -4,8 +4,58 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Threading.RateLimiting;
+using System.Diagnostics.Metrics;
+using System.Diagnostics;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+var applicationMeter = new Meter("RestApi");
+var requestCounter = applicationMeter.CreateCounter<long>("restapi_http_request_count", "{request}");
+var requestDuration = applicationMeter.CreateHistogram<double>("restapi_http_request_duration", "s");
+var activeRequests = applicationMeter.CreateUpDownCounter<long>("restapi_http_active_requests", "{request}");
+
+var serviceName = builder.Configuration["OpenTelemetry:ServiceName"] ?? "rest-api";
+var otlpEndpoint = new Uri(builder.Configuration["OpenTelemetry:OtlpEndpoint"] ?? "http://otel-collector:4317");
+
+builder.Host.UseSerilog((context, _, loggerConfiguration) => loggerConfiguration
+    .ReadFrom.Configuration(context.Configuration)
+    .Enrich.FromLogContext()
+    .WriteTo.Console()
+    .WriteTo.Seq(context.Configuration["Seq:Url"] ?? "http://seq:5341"));
+
+builder.Services.AddOpenTelemetry()
+    .ConfigureResource(resource => resource.AddService(serviceName))
+    .WithMetrics(metrics => metrics
+        .AddAspNetCoreInstrumentation()
+        .AddHttpClientInstrumentation()
+        .AddRuntimeInstrumentation()
+        .AddProcessInstrumentation()
+        .AddMeter(
+            "RestApi",
+            "Microsoft.AspNetCore.Hosting",
+            "Microsoft.AspNetCore.Server.Kestrel",
+            "System.Net.Http",
+            "System.Net.NameResolution",
+            "System.Net.Security",
+            "System.Net.Sockets",
+            "Microsoft.EntityFrameworkCore")
+        .AddPrometheusExporter()
+        .AddOtlpExporter(options =>
+        {
+            options.Endpoint = otlpEndpoint;
+            options.BatchExportProcessorOptions.ScheduledDelayMilliseconds = 1000;
+        }))
+    .WithTracing(traces => traces
+        .AddAspNetCoreInstrumentation()
+        .AddHttpClientInstrumentation()
+        .AddSqlClientInstrumentation()
+        .AddOtlpExporter(options =>
+        {
+            options.Endpoint = otlpEndpoint;
+        }));
 
 // Rate Limiting
 builder.Services.AddRateLimiter(options => // Rate limiting servisini ekliyoruz
@@ -24,7 +74,8 @@ builder.Services.AddRateLimiter(options => // Rate limiting servisini ekliyoruz
 
 // Add services to the container.
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddHealthChecks().AddDbContextCheck<ApplicationDbContext>();
 builder.Services.AddControllers();
 // Register PasswordManager to read configuration via DI
 builder.Services.AddSingleton<RestApi.Services.PasswordManager>();
@@ -45,8 +96,11 @@ builder.Services.AddCors(options =>
 });
 
 
+var jwtKeyValue = builder.Configuration.GetValue<string>("Jwt:Key");
+if (string.IsNullOrEmpty(jwtKeyValue))
+    throw new InvalidOperationException("Jwt:Key configuration is missing");
 
-var key = Encoding.ASCII.GetBytes(builder.Configuration.GetValue<string>("Jwt:Key"));
+var key = Encoding.ASCII.GetBytes(jwtKeyValue);
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -85,6 +139,35 @@ builder.Services.AddAntiforgery(options =>
 });
 
 var app = builder.Build();
+
+app.Use(async (context, next) =>
+{
+    var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+    var tags = new TagList
+    {
+        { "http_request_method", context.Request.Method },
+        { "http_route", context.Request.Path.Value ?? "/" }
+    };
+    activeRequests.Add(1, tags);
+    try
+    {
+        await next();
+    }
+    finally
+    {
+        stopwatch.Stop();
+        tags.Add("http_response_status_code", context.Response.StatusCode);
+        requestCounter.Add(1, tags);
+        requestDuration.Record(stopwatch.Elapsed.TotalSeconds, tags);
+        activeRequests.Add(-1, tags);
+    }
+});
+
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    db.Database.Migrate();
+}
 
 // https config
 if (!app.Environment.IsDevelopment())
@@ -151,6 +234,8 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.MapHealthChecks("/health");
+app.MapPrometheusScrapingEndpoint();
 app.MapControllers();
 
 app.Run();

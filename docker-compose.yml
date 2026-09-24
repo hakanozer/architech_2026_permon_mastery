@@ -6,15 +6,7 @@ name: net-perform
 # Orijinal docker-compose.infra.yml'den TÜRETİLMİŞTİR. Aşağıdaki servisler
 # BİLİNÇLİ OLARAK ÇIKARILDI (sadece performans/gözlemlenebilirlik odaklı bir
 # alt küme isteniyor): redis, kafka, kafka-ui, vault, keycloak, consul,
-# rabbitmq, nginx, jaeger.
-#
-# NOT (jaeger hakkında): otel-collector, trace'leri normalde jaeger'a
-# gönderiyordu (otlp_grpc/jaeger exporter). Jaeger bu sette olmadığı için
-# otel-collector-config.yaml'daki jaeger exporter'ı kaldırdım — aksi halde
-# collector "connection refused" hatasıyla trace pipeline'ında sürekli
-# hata loglar (metrics/log pipeline'ları etkilenmez). Trace görüntülemeniz
-# gerekirse jaeger servisini geri eklemeniz ve config'e otlp_grpc/jaeger
-# exporter'ını tekrar eklemeniz gerekir.
+# rabbitmq, nginx.
 #
 # Container isimlerine, talep edildiği gibi "permon-" ön eki eklendi
 # (örn. neominal-postgres -> permon-neominal-postgres). SERVİS adları
@@ -36,6 +28,8 @@ volumes:
   otel-collector-data:
   prometheus-data:
   grafana-data:
+    name: net-perform_grafana-data-v2
+  jaeger-data:
 
 services:
   # ----------------------------------------------------------------
@@ -71,12 +65,17 @@ services:
     restart: unless-stopped
     environment:
       ACCEPT_EULA: 'Y'
-      SEQ_FIRSTRUN_ADMINPASSWORD: ${SEQ_ADMIN_PASSWORD}
+      SEQ_FIRSTRUN_ADMINPASSWORD: ${SEQ_ADMIN_PASSWORD:-dev-seq-password}
     ports:
       - '5341:5341' # Serilog ingestion endpoint
       - '8081:80' # Seq Web UI
     volumes:
       - seq-data:/data
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:80/api']
+      interval: 10s
+      timeout: 5s
+      retries: 10
     networks:
       - neominal-net
 
@@ -84,7 +83,9 @@ services:
   # OpenTelemetry Collector - Trace/Metric aggregator
   # ----------------------------------------------------------------
   otel-collector:
-    image: otel/opentelemetry-collector:latest
+    build:
+      context: ./infra/otel-collector
+      dockerfile: Dockerfile
     container_name: permon-neominal-otel-collector
     restart: unless-stopped
     command: ['--config=/etc/otel-collector-config.yaml']
@@ -94,11 +95,16 @@ services:
     ports:
       - '4317:4317' # OTLP gRPC receiver (← .NET buradan gönderir)
       - '4318:4318' # OTLP HTTP receiver
+      - '13133:13133' # Collector health
+      - '8889:8889' # Prometheus exporter
     healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://localhost:13133/']
+      test: ['CMD', 'wget', '-q', '-O', '-', 'http://localhost:13133/']
       interval: 10s
       timeout: 5s
       retries: 5
+    depends_on:
+      seq:
+        condition: service_healthy
     networks:
       - neominal-net
 
@@ -114,8 +120,79 @@ services:
       - prometheus-data:/prometheus
     ports:
       - '9090:9090'
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:9090/-/healthy']
+      interval: 10s
+      timeout: 5s
+      retries: 10
     extra_hosts:
       - 'host.docker.internal:host-gateway' # Linux'ta host.docker.internal çözümlemesi için
+    networks:
+      - neominal-net
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: permon-neominal-postgres-exporter
+    restart: unless-stopped
+    environment:
+      DATA_SOURCE_NAME: postgresql://neominal:neominal_pass@postgres:5432/neominal_demo?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:9187/metrics']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - neominal-net
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: permon-neominal-jaeger
+    restart: unless-stopped
+    environment:
+      COLLECTOR_OTLP_ENABLED: 'true'
+    ports:
+      - '16686:16686'
+    volumes:
+      - jaeger-data:/badger
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:16686/']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - neominal-net
+
+  api:
+    build:
+      context: .
+      dockerfile: RestApi/Dockerfile
+    container_name: net-perform-api
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=neominal_demo;Username=neominal;Password=neominal_pass
+      OpenTelemetry__ServiceName: rest-api
+      OpenTelemetry__OtlpEndpoint: http://otel-collector:4317
+      Seq__Url: http://seq:5341
+    ports:
+      - '8080:8080'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      otel-collector:
+        condition: service_healthy
+      seq:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8080/health']
+      interval: 10s
+      timeout: 5s
+      start_period: 20s
+      retries: 10
     networks:
       - neominal-net
 
@@ -128,11 +205,21 @@ services:
     restart: unless-stopped
     environment:
       GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-dev-grafana-password}
     ports:
       - '3000:3000'
     volumes:
       - grafana-data:/var/lib/grafana
       - ./infra/grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      prometheus:
+        condition: service_healthy
+      jaeger:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:3000/api/health']
+      interval: 10s
+      timeout: 5s
+      retries: 10
     networks:
       - neominal-net

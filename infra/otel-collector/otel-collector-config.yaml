@@ -7,21 +7,18 @@ receivers:
         endpoint: 0.0.0.0:4318
 
 exporters:
-  # NOT: Bu "net-perform" setinde Jaeger servisi YOK — bu yüzden jaeger
-  # exporter'ı buradan çıkarıldı. Trace pipeline'ı yine de çalışır ama
-  # trace'ler sadece "debug" exporter ile collector loglarına yazılır,
-  # görselleştirilmez. Jaeger'da trace görmek isterseniz jaeger servisini
-  # geri ekleyin ve şu exporter'ı tekrar tanımlayın:
-  #   otlp_grpc/jaeger:
-  #     endpoint: jaeger:4317
-  #     tls:
-  #       insecure: true
+  otlp/jaeger:
+    endpoint: jaeger:4317
+    tls:
+      insecure: true
   prometheus:
     # DİKKAT: 8888 KULLANMAYIN — Collector'ın kendi iç telemetri sunucusu
     # (service::telemetry::metrics) varsayılan olarak 0.0.0.0:8888'i zaten
     # kullanıyor. Aynı portu burada da vermek "address already in use" hatası
     # verir. Bu yüzden farklı bir port (8889) kullanıyoruz.
     endpoint: "0.0.0.0:8889"
+    resource_to_telemetry_conversion:
+      enabled: true
   debug: # "logging" exporter'ı deprecate edildi, yerine "debug" geldi
     verbosity: detailed
 
@@ -33,13 +30,18 @@ processors:
     check_interval: 1s
     limit_mib: 512
 
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+
 service:
+  extensions: [health_check]
   pipelines:
     traces:
       receivers: [otlp]
       processors: [memory_limiter, batch]
-      exporters: [debug]
+      exporters: [otlp/jaeger, debug]
     metrics:
       receivers: [otlp]
       processors: [memory_limiter, batch]
-      exporters: [prometheus, debug]
+      exporters: [prometheus]
