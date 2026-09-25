@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WinDbg + RestApi Uygulamali Debug Rehberi</title>
+<style>
+:root{--bg:#0b1220;--panel:#111c2e;--panel2:#16263d;--text:#e8eef7;--muted:#a9b8cb;--line:#2a3b54;--accent:#67d5c3;--accent2:#7db5ff;--warn:#ffd166;--danger:#ff8b8b;--ok:#78e08f;--code:#08101d;--shadow:0 16px 40px #0005}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:linear-gradient(135deg,#09111e,#0e1d31 55%,#13253b);color:var(--text);font:16px/1.65 system-ui,-apple-system,"Segoe UI",sans-serif}a{color:var(--accent2)}header{padding:48px 5vw 38px;border-bottom:1px solid var(--line);background:radial-gradient(circle at 80% 0,#1e496055,transparent 42%)}h1,h2,h3,h4{line-height:1.2;letter-spacing:0}h1{font-size:clamp(2rem,5vw,4rem);max-width:950px;margin:0 0 15px}h2{font-size:2rem;margin-top:0;color:var(--accent)}h3{font-size:1.35rem;color:#cfe1ff;margin-top:32px}h4{color:var(--warn)}p{max-width:1000px}.eyebrow{color:var(--accent);font-weight:700;text-transform:uppercase;letter-spacing:.12em;font-size:.78rem}.subtitle{font-size:1.15rem;color:var(--muted);max-width:850px}.layout{display:grid;grid-template-columns:290px minmax(0,1fr);max-width:1600px;margin:auto}.sidebar{position:sticky;top:0;height:100vh;overflow:auto;padding:24px 18px;border-right:1px solid var(--line);background:#0b1625dd}.sidebar strong{display:block;color:var(--accent);margin:8px 10px 15px}.sidebar a{display:block;padding:7px 10px;color:var(--muted);text-decoration:none;border-radius:6px;font-size:.91rem}.sidebar a:hover{background:var(--panel2);color:var(--text)}main{padding:42px 5vw 100px;min-width:0}.section{padding:34px 0;border-bottom:1px solid var(--line)}.card{background:linear-gradient(145deg,#14243a,#101b2d);border:1px solid var(--line);border-radius:8px;padding:22px;margin:18px 0;box-shadow:var(--shadow)}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}.callout{border-left:4px solid var(--accent);background:#16394a88;padding:14px 18px;margin:18px 0}.warning{border-left-color:var(--warn);background:#4b3b1388}.danger{border-left-color:var(--danger);background:#4b1d2a88}.success{border-left-color:var(--ok);background:#153e2a88}pre{background:var(--code);border:1px solid #243b58;border-radius:7px;padding:15px 17px;overflow:auto;color:#d9e8fa;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}code{font-family:Consolas,"Cascadia Code",monospace;color:#d9e8fa;background:#14243a;padding:2px 5px;border-radius:4px}pre code{background:none;padding:0}.cmd{border-color:#2d6a65}.cmd::before{content:"KOMUT";display:block;color:var(--accent);font-size:.72rem;font-weight:700;letter-spacing:.12em;margin-bottom:7px}.expected{border-color:#456b93}.expected::before{content:"BEKLENEN ÇIKTI (ÖRNEK)";display:block;color:var(--accent2);font-size:.72rem;font-weight:700;letter-spacing:.12em;margin-bottom:7px}.note{color:var(--muted)}table{border-collapse:collapse;width:100%;margin:16px 0;display:block;overflow:auto}th,td{text-align:left;vertical-align:top;border:1px solid var(--line);padding:9px 11px;min-width:130px}th{background:#1a314d;color:var(--accent)}li{margin:5px 0}.pill{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:3px 9px;margin:3px;color:var(--muted);font-size:.84rem}.toc-top{position:fixed;right:20px;bottom:20px;background:var(--accent);color:#09201d;border:0;border-radius:6px;padding:10px 13px;font-weight:700;cursor:pointer}.small{font-size:.9rem;color:var(--muted)}.two{columns:2;column-gap:34px}.two>*{break-inside:avoid}@media(max-width:900px){.layout{display:block}.sidebar{position:relative;height:auto;border-right:0;border-bottom:1px solid var(--line)}.sidebar nav{columns:2}.sidebar a{break-inside:avoid}.two{columns:1}main{padding:28px 5vw}.card{padding:17px}h2{font-size:1.65rem}}@media(max-width:540px){.sidebar nav{columns:1}header{padding:34px 5vw 28px}pre{font-size:.82rem}}
+</style>
+</head>
+<body id="top">
+<header>
+  <div class="eyebrow">.NET 10 · ASP.NET Core · Windows Debugging</div>
+  <h1>WinDbg ile mevcut RestApi projesini debug etme rehberi</h1>
+  <p class="subtitle">Bu doküman, repository içindeki gerçek <code>RestApi</code> kodu üzerinden hazırlanmıştır. Önce uygulamayı çalıştırır, sonra WinDbg ile process'e bağlanır, gerçek controller breakpoint'leri kullanır, PostgreSQL akışını izler, kasıtlı exception'ı yakalar ve dump/heap/thread analizi yaparsınız.</p>
+  <div><span class="pill">Target: net10.0</span><span class="pill">Yerel HTTP: 5120</span><span class="pill">Docker API: 8080</span><span class="pill">PostgreSQL: 15432</span><span class="pill">WinDbg Preview</span></div>
+</header>
+<div class="layout">
+<aside class="sidebar">
+<strong>İÇİNDEKİLER</strong>
+<nav>
+<a href="#harita">Yol haritası</a><a href="#proje">Proje analizi</a><a href="#kurulum">WinDbg kurulumu</a><a href="#symbols">Symbols ve source</a><a href="#calistir">API'yi çalıştırma</a><a href="#endpoints">Endpoint haritası</a><a href="#attach">Attach</a><a href="#breakpoints">Breakpoint'ler</a><a href="#controller">Controller lab</a><a href="#db">EF Core / DB lab</a><a href="#exception">Exception lab</a><a href="#sos">SOS komutları</a><a href="#threads">Thread analizi</a><a href="#async">Async / await</a><a href="#memory">Memory / heap</a><a href="#cpu">CPU analizi</a><a href="#deadlock">Deadlock</a><a href="#dump">Dump alma</a><a href="#postman">Postman + WinDbg</a><a href="#hatalar">Hatalı istekler</a><a href="#matrix">Test matrisi</a><a href="#troubleshoot">Troubleshooting</a><a href="#reference">Komut referansı</a><a href="#checklist">Kontrol listesi</a><a href="#final">Final lab</a>
+</nav>
+</aside>
+<main>
+<section class="section" id="harita"><h2>WinDbg ile RestApi Debugging Yol Haritası</h2>
+<pre>RestApi'yi çalıştır
+        ↓
+Process'i bul
+        ↓
+WinDbg'yi aç
+        ↓
+Process'e Attach
+        ↓
+Symbol'leri yükle
+        ↓
+Breakpoint koy
+        ↓
+API request gönder
+        ↓
+Breakpoint'e düş
+        ↓
+Variables ve Call Stack incele
+        ↓
+Controller → DbContext → PostgreSQL akışını izle
+        ↓
+Exception / Thread / Memory / Dump incele
+        ↓
+Root cause bul ve tekrar test et</pre>
+<div class="callout success"><strong>Nasıl ilerlemeli?</strong> Önce 1-10. bölümleri sırayla yapın. Sonra Controller, Exception, Dump ve Memory laboratuvarlarına geçin. PID, adres, thread ID ve object adresleri her makinede değişir; aşağıdaki çıktılar biçimi göstermek içindir.</div>
+</section>
+
+<section class="section" id="proje"><h2>1. Repository Analizi: Gerçekte Ne Var?</h2>
+<p>Bu rehberde uydurma bir servis katmanı veya Swagger ekranı kullanılmıyor. Mevcut uygulamanın gerçek giriş noktası <code>Program.cs</code>'dir. <code>Startup.cs</code> eski bir pipeline içerir ancak uygulama modern <code>WebApplication.CreateBuilder</code> akışını kullanır.</p>
+<table><thead><tr><th>Alan</th><th>Gerçek durum</th><th>Debug açısından anlamı</th></tr></thead><tbody>
+<tr><td>Framework</td><td><code>net10.0</code></td><td>Modern .NET runtime ve SOS kullanılır.</td></tr>
+<tr><td>Controller</td><td><code>AuthController</code>, <code>ProductController</code>, <code>NoteController</code></td><td>Gerçek source breakpoint noktaları.</td></tr>
+<tr><td>Service</td><td>DI ile <code>PasswordManager</code> singleton</td><td>Login akışında Step Into yapılabilir.</td></tr>
+<tr><td>Repository</td><td>Ayrı repository sınıfı yok</td><td>Controller doğrudan <code>ApplicationDbContext</code> kullanır.</td></tr>
+<tr><td>Database</td><td>EF Core + PostgreSQL; <code>Users</code>, <code>Products</code>, <code>Notes</code></td><td>SQL Client tracing ve migration startup'ı izlenebilir.</td></tr>
+<tr><td>Logging</td><td>Serilog Console + Seq; <code>ILogger</code>; ayrıca Console.WriteLine</td><td>Log, debugger state'in yerine geçmez.</td></tr>
+<tr><td>Observability</td><td>OpenTelemetry traces/metrics, Prometheus, health</td><td>Debugger yanında runtime sinyallerini karşılaştırabilirsiniz.</td></tr>
+<tr><td>Auth</td><td>JWT; cookie adı <code>X-Access-Token</code>; Product/Note role policy</td><td>401/403 breakpoint senaryoları.</td></tr>
+<tr><td>Yok</td><td>Swagger, test projesi, HttpClient, cache, HostedService, manuel Thread, CancellationToken</td><td>Bu konular aşağıda demonstrasyon olarak işaretlenir.</td></tr>
+</tbody></table>
+<div class="callout warning"><strong>Güvenlik notu:</strong> Repository'de JWT ve encryption key appsettings içinde sabit tutuluyor. WinDbg ile process belleğinde bu değerlerin bulunabileceğini unutmayın. Gerçek sistemlerde secret manager/environment kullanın.</div>
+</section>
+
+<section class="section" id="kurulum"><h2>2. WinDbg Kurulumu ve İlk Ayarlar</h2>
+<h3>2.1 WinDbg'yi kurun</h3><ol><li>Windows Start menüsünü açın ve <strong>Microsoft Store</strong> yazın.</li><li>Store'da <strong>WinDbg</strong> veya <strong>WinDbg Preview</strong> aratın. Microsoft imzalı uygulamayı seçin.</li><li><strong>Get / Install</strong> düğmesine basın.</li><li>Kurulum bitince Start menüsünden WinDbg'yi açın. Açılışta <strong>File</strong>, <strong>Home</strong>, <strong>Open dump file</strong> ve <strong>Attach to a process</strong> seçeneklerini görmelisiniz.</li><li>Klasik Debugging Tools for Windows kuruluysa <code>windbg.exe</code> de kullanılabilir; menü isimleri biraz farklı olabilir.</li></ol>
+<h3>2.2 Symbol path</h3><p>Symbol, DLL içindeki makine kodunu method/source adıyla eşleştiren PDB bilgisidir. Önce Microsoft symbol cache klasörünü oluşturun.</p>
+<pre class="cmd">$cache = "$env:LOCALAPPDATA\\WinDbg\\SymbolCache"
+New-Item -ItemType Directory -Force $cache
+[Environment]::SetEnvironmentVariable('_NT_SYMBOL_PATH', "srv*$cache*https://msdl.microsoft.com/download/symbols", 'User')</pre>
+<pre class="expected">Directory: C:\Users\&lt;user&gt;\AppData\Local\WinDbg
+SymbolCache</pre>
+<p>WinDbg açıkken Command penceresine de yazabilirsiniz:</p>
+<pre class="cmd">.symfix C:\Users\%USERNAME%\AppData\Local\WinDbg\SymbolCache
+.sympath+ C:\Users\%USERNAME%\source\repos\architech_2026_permon_mastery\RestApi\bin\Debug\net10.0
+.reload /f</pre>
+<div class="callout"><strong>GUI yolu:</strong> <code>File &gt; Settings &gt; Debugging settings &gt; Symbols</code>. Microsoft Symbol Server satırını ve local cache yolunu ekleyin, <strong>Apply</strong> sonra <strong>OK</strong> seçin. Klasik WinDbg'de <code>File &gt; Symbol File Path</code> kullanılır.</div>
+<h3>2.3 Source path</h3><pre class="cmd">.srcpath C:\Users\%USERNAME%\source\repos\architech_2026_permon_mastery
+.srcpath</pre><pre class="expected">Source search path:
+C:\Users\Kaan\source\repos\architech_2026_permon_mastery</pre>
+<p><code>lm</code> ile modülleri, <code>lmvm RestApi</code> ile RestApi DLL ve PDB durumunu kontrol edin. <code>*** WARNING: Unable to verify checksum</code> veya <code>deferred</code> görürseniz aşağıdaki troubleshooting bölümüne geçin.</p>
+</section>
+
+<section class="section" id="symbols"><h2>3. Symbol, DLL, PDB ve Source İlişkisi</h2>
+<div class="grid"><div class="card"><h3>DLL</h3><p>Derlenmiş assembly'dir. Runtime method'ları burada çalıştırır.</p></div><div class="card"><h3>PDB</h3><p>IL/native instruction ile source dosyası ve satır numarası arasındaki eşlemedir.</p></div><div class="card"><h3>Source</h3><p>Breakpoint'in okunabilir method ve satır olarak görünmesini sağlar.</p></div></div>
+<pre class="cmd">lm
+lmvm RestApi
+.reload /f RestApi.dll
+!name2ee RestApi.dll RestApi.Controllers.ProductController.GetAll</pre>
+<pre class="expected">Module listesinde RestApi.dll görülür.
+Symbols loaded / private symbols bilgisi görülebilir.
+Method için MethodTable veya EEClass adresi dönebilir.</pre>
+<p><code>!name2ee</code> SOS ile assembly/type/method eşlemesi yapar. Komut tanınmıyorsa CLR yüklenmemiş olabilir; <code>!loadby sos coreclr</code> deneyin.</p>
+</section>
+
+<section class="section" id="calistir"><h2>4. RestApi'yi Çalıştırma</h2>
+<h3>4.1 Host üzerinde çalışma</h3><p>Bu yol WinDbg ile attach için en kolay yoldur; process doğrudan Windows'taki <code>dotnet.exe</code> olur. Önce Docker PostgreSQL'i başlatın.</p>
+<pre class="cmd">docker compose up -d postgres
+# ayrı terminal
+dotnet restore RestApi/RestApi.csproj
+dotnet build RestApi/RestApi.csproj
+dotnet run --project RestApi/RestApi.csproj --launch-profile http</pre>
+<pre class="expected">Now listening on: http://localhost:5120
+Hosting environment: Development</pre>
+<p>Host appsettings bağlantısı <code>localhost:15432</code> kullanır. Compose içindeki API ise environment override ile <code>postgres:5432</code> kullanır.</p>
+<h3>4.2 Docker çalışma</h3><pre class="cmd">docker compose up -d --build
+docker compose ps
+Invoke-WebRequest http://localhost:8080/health -UseBasicParsing</pre><pre class="expected">api ... Up ... (healthy)
+postgres ... healthy
+StatusCode : 200
+Content    : Healthy</pre>
+<div class="callout warning"><strong>WinDbg notu:</strong> Docker Linux container içindeki .NET process'e Windows WinDbg ile normal Windows process gibi attach edemezsiniz. WinDbg lab'larının ana yolu host üzerinde <code>dotnet run</code>'dır. Container dump'ı için Linux araçları veya container içinde uygun dump workflow'u gerekir.</div>
+</section>
+
+<section class="section" id="endpoints"><h2>5. Gerçek Endpoint Haritası</h2>
+<table><thead><tr><th>Controller</th><th>Method / URL</th><th>Auth</th><th>Body / sonuç</th></tr></thead><tbody>
+<tr><td>Auth</td><td>POST <code>/api/Auth/register</code></td><td>Yok</td><td>User JSON; 200 ile kayıtlı user döner.</td></tr>
+<tr><td>Auth</td><td>POST <code>/api/Auth/login</code></td><td>Yok</td><td><code>username,password,city</code>; JWT JSON + cookie.</td></tr>
+<tr><td>Auth</td><td>POST <code>/api/Auth/LoginSql</code></td><td>Yok</td><td>Parametreli raw SQL; <code>raw</code> alanı.</td></tr>
+<tr><td>Product</td><td>GET <code>/api/Product</code></td><td>Role Product</td><td>Product[] veya 401/403.</td></tr>
+<tr><td>Product</td><td>POST <code>/api/Product</code></td><td>Role Product</td><td>Name/Price; 200 Product.</td></tr>
+<tr><td>Product</td><td>PUT <code>/api/Product/{id}</code></td><td>Role Product</td><td>200 Product veya 404.</td></tr>
+<tr><td>Product</td><td>DELETE <code>/api/Product/{id}</code></td><td>Role Product</td><td>200 boş veya 404.</td></tr>
+<tr><td>Note</td><td>GET <code>/api/Note</code></td><td>Role Note</td><td>Bilerek <code>DivideByZeroException</code> üretir.</td></tr>
+<tr><td>Note</td><td>POST/PUT/DELETE <code>/api/Note[/id]</code></td><td>Role Note</td><td>CRUD; 200 veya 404.</td></tr>
+<tr><td>System</td><td>GET <code>/health</code></td><td>Yok</td><td>DB check; Healthy/503.</td></tr>
+<tr><td>System</td><td>GET <code>/metrics</code></td><td>Yok</td><td>Prometheus metric text.</td></tr>
+</tbody></table>
+<h3>Gerçek request örnekleri</h3>
+<pre class="cmd">$base = 'http://localhost:5120'
+Invoke-RestMethod "$base/api/Auth/register" -Method Post -ContentType 'application/json' -Body (@{
+  username='product@example.com'; password='Secret123!'; role='Product'
+} | ConvertTo-Json)</pre>
+<p>Login için <code>city</code> zorunludur ve yalnızca <code>istanbul</code>, <code>ankara</code>, <code>izmir</code> kabul edilir.</p>
+<pre class="cmd">$login = Invoke-WebRequest "$base/api/Auth/login" -Method Post -ContentType 'application/json' -SessionVariable session -Body (@{
+  username='product@example.com'; password='Secret123!'; city='istanbul'
+} | ConvertTo-Json)
+$token = ($login.Content | ConvertFrom-Json).token
+Invoke-RestMethod "$base/api/Product" -Headers @{ Authorization = "Bearer $token" }</pre>
+<pre class="expected">Register: 200 OK ve User JSON
+Login: { "token": "..." } ve X-Access-Token cookie
+Product: JSON array veya Product object</pre>
+</section>
+
+<section class="section" id="attach"><h2>6. Process Bulma ve WinDbg'ye Attach</h2>
+<h3>6.1 Process ve PID nedir?</h3><p>Process çalışan program örneğidir. Host modunda uygulamayı çalıştıran ana process genellikle <code>dotnet.exe</code>, PID ise Windows'un o process'e verdiği sayısal kimliktir.</p>
+<pre class="cmd">Get-Process dotnet | Format-Table Id,ProcessName,Path,StartTime
+Get-CimInstance Win32_Process -Filter "Name = 'dotnet.exe'" | Select-Object ProcessId,CommandLine</pre>
+<pre class="expected">Id   ProcessName Path
+---- ----------- ----
+1234 dotnet       C:\Program Files\dotnet\dotnet.exe
+
+CommandLine içinde RestApi.dll veya RestApi.csproj görülmeli.</pre>
+<p><strong>Task Manager yöntemi:</strong> Ctrl+Shift+Esc → <strong>Details</strong> → <code>dotnet.exe</code> satırı → sağ tık <strong>Go to details</strong>. Command line sütunu görünmüyorsa başlık satırına sağ tıklayın → <strong>Select columns</strong> → <strong>Command line</strong>.</p>
+<h3>6.2 WinDbg GUI</h3><ol><li>Start menüsünden <strong>WinDbg</strong> açın.</li><li><strong>File &gt; Attach to Process</strong> seçin. Bazı sürümlerde Home ekranındaki <strong>Attach to a process</strong> kartı bulunur.</li><li>Process listesinde doğru PID'yi seçin. Command line içinde <code>RestApi</code> yazan process'i tercih edin.</li><li><strong>Attach</strong> düğmesine basın.</li><li>Debugger process'i durdurur. Bu normaldir; Command penceresinde break state görünür.</li><li>İlk iş <code>g</code> yazıp Enter'a basarak uygulamayı devam ettirin.</li></ol>
+<pre class="cmd">.process
+|. 0s
+~</pre>
+<pre class="expected">0:000&gt; veya benzeri debugger prompt'u
+Current process ...
+Thread listesi</pre>
+<div class="callout warning"><strong>Access denied:</strong> WinDbg'yi yönetici olarak açın veya uygulamayı başlatan aynı kullanıcı hesabını kullanın. Yanlış <code>dotnet.exe</code>'ye attach olursanız breakpoint tetiklenmez.</div>
+</section>
+
+<section class="section" id="breakpoints"><h2>7. Breakpoint Türleri</h2>
+<h3>7.1 Source breakpoint</h3><p>En güvenilir başlangıç yöntemi, Visual Studio/VS Code'da gerçek satırın soluna breakpoint koyup PDB ile eşleştirmektir. WinDbg GUI'de <code>Debug &gt; Breakpoints &gt; New Breakpoint</code> veya <code>Ctrl+B</code> kullanılabilir; source dosya/satır seçin.</p>
+<pre class="cmd">bp RestApi!RestApi.Controllers.ProductController.GetAll
+bl
+bc 0
+be 0
+bd 0</pre>
+<pre class="expected">0 e Disable/Enable durumu olan breakpoint listesi
+Method adı çözümlenmezse pending breakpoint görülebilir.</pre>
+<h3>7.2 Function / conditional breakpoint</h3><pre class="cmd">bp RestApi!RestApi.Controllers.AuthController.Login
+bp /1 RestApi!RestApi.Controllers.NoteController.GetAll
+bp /w "@$tpid == 1234" RestApi!RestApi.Controllers.ProductController.GetAll</pre><p><code>/1</code> ilk hit'ten sonra silinecek geçici breakpoint örneğidir. Conditional breakpoint sözdizimi WinDbg sürümüne ve native/managed bağlama göre değişebilir; source window üzerindeki koşul alanı daha güvenlidir.</p>
+<h3>7.3 Exception breakpoint</h3><pre class="cmd">sxe clr
+sxe av
+sxe eh
+bl</pre><p><code>sxe</code> exception oluştuğunda first chance break ister. Gürültü çoksa yalnızca deney için <code>sxd clr</code> ile devam davranışına dönebilirsiniz. C# <code>DivideByZeroException</code> için SOS ile exception nesnesini kontrol edeceğiz.</p>
+<h3>7.4 Module, address ve data breakpoint</h3><pre class="cmd">bm RestApi!*Product*
+lm m RestApi
+ba e 1 RestApi!SomeAddress</pre><p>Managed object field için klasik native data breakpoint doğrudan uygun değildir. Managed field değişimini izlemek için source breakpoint veya debugger'ın managed data breakpoint desteğini kullanın; WinDbg sürümünde desteklenmiyorsa bu özellik demonstrasyon olarak kalır.</p>
+</section>
+
+<section class="section" id="controller"><h2>8. Uygulamalı Lab: ProductController Debug</h2>
+<h3>Amaç</h3><p>JWT role doğrulamasından sonra gerçek controller methoduna girip request, DbContext, entity ve response akışını görmek.</p>
+<h3>Ön koşullar</h3><ul><li>Host API <code>http://localhost:5120</code> çalışıyor.</li><li>Product role'lü kullanıcı kayıtlı ve login token'ı hazır.</li><li>WinDbg doğru <code>dotnet.exe</code>'ye attach oldu.</li><li>Symbols/source path ayarlandı.</li></ul>
+<h3>Adımlar</h3><ol><li>WinDbg Command penceresine <code>bp RestApi!RestApi.Controllers.ProductController.Create</code> yazın.</li><li><code>g</code> ile devam edin.</li><li>Postman veya PowerShell ile POST gönderin.</li><li>Breakpoint'e düşünce <code>k</code>, <code>!clrstack</code>, <code>dv</code> çalıştırın.</li><li>F10 / <code>p</code> ile <code>_context.Products.Add(product)</code> satırını geçin.</li><li>F10 ile <code>SaveChanges()</code> çağrısını izleyin. SQL tarafını PostgreSQL logları veya OTel trace ile çapraz kontrol edin.</li><li>F5 / <code>g</code> ile devam edip response'u alın.</li></ol>
+<pre class="cmd">bp RestApi!RestApi.Controllers.ProductController.Create
+g
+!clrstack
+k
+dv
+p
+p
+p</pre>
+<pre class="expected">Breakpoint hit at ProductController.Create
+Local variables / arguments içinde product ve this görülür.
+Managed stack içinde ControllerActionInvoker ve ProductController.Create bulunur.</pre>
+<h3>Gerçek kodda izlenen akış</h3><pre>ProductController.Create(Product product)
+    ↓
+_context.Products.Add(product)
+    ↓
+_context.SaveChanges()
+    ↓
+return Ok(product)</pre>
+<div class="callout"><strong>Beklenen öğrenme:</strong> Bu projede ayrı Service veya Repository çağrısı yoktur. Controller doğrudan EF Core DbContext kullandığı için stack'te ayrı bir repository frame'i aramayın.</div>
+</section>
+
+<section class="section" id="db"><h2>9. EF Core ve PostgreSQL Debug</h2>
+<p><code>ApplicationDbContext</code> içinde <code>Users</code>, <code>Notes</code> ve <code>Products</code> DbSet'leri vardır. Application startup sırasında <code>db.Database.Migrate()</code> çalışır.</p>
+<pre class="cmd">bp RestApi!RestApi.Data.ApplicationDbContext.SaveChanges
+bp RestApi!RestApi.Controllers.ProductController.Update
+bp RestApi!RestApi.Controllers.ProductController.Delete
+g</pre>
+<p>Bir breakpoint'te:</p><ol><li><code>!clrstack</code> ile controller action'a nasıl gelindiğini okuyun.</li><li><code>k</code> ile native+managed stack'i karşılaştırın.</li><li><code>dv</code> ile <code>id</code>, <code>product</code>, <code>existingProduct</code> gibi parametreleri görün.</li><li>EF internal frame'lerinde isimler optimize edilmiş veya async olmayan wrapper'lar nedeniyle farklı olabilir.</li></ol>
+<pre class="cmd">docker logs permon-neominal-postgres --tail 100
+Invoke-RestMethod http://localhost:5120/health
+Invoke-RestMethod http://localhost:5120/metrics</pre>
+<div class="callout warning"><strong>Host/Container farkı:</strong> Host API için DB <code>localhost:15432</code>; Docker API için <code>postgres:5432</code>. WinDbg ile host API debug ederken connection string'in Docker DNS adı içermediğini kontrol edin.</div>
+</section>
+
+<section class="section" id="exception"><h2>10. Gerçek Exception Lab: NoteController.GetAll</h2>
+<div class="callout danger"><strong>Bu proje sürümündeki gerçek hata:</strong> <code>NoteController.GetAll()</code> içinde <code>int i = 1; int ii = i / 0;</code> vardır. Bu endpoint kasıtlı olarak <code>DivideByZeroException</code> üretir. Dokümanda demonstrasyon değildir; repository'de mevcut gerçek koddur.</div>
+<h3>Adım adım</h3><ol><li>Note role'lü token ile WinDbg'ye attach olun.</li><li><code>sxe clr</code> veya source breakpoint'i <code>NoteController.GetAll</code>'a koyun.</li><li><code>g</code> yazın.</li><li>GET <code>/api/Note</code> gönderin.</li><li>Breakpoint'te <code>dv</code> ile <code>notes</code>, <code>i</code> değişkenini görün.</li><li>F10 ile <code>int ii = i / 0</code> satırını çalıştırın. Exception break etkinse debugger burada durur.</li><li><code>!pe</code>, <code>!clrstack</code>, <code>k</code> çalıştırın.</li><li>Development'ta detaylı hata, Production'da GlobalExceptionHandler tarafından error ID içeren 500 JSON beklenir.</li></ol>
+<pre class="cmd">sxe clr
+g
+!pe
+!clrstack
+k
+~* k</pre>
+<pre class="expected">Exception type: System.DivideByZeroException
+Stack içinde RestApi.Controllers.NoteController.GetAll görülür.
+Production response örneği:
+{"error":"An unexpected error occurred. Please try again later.","code":"...","timestamp":"..."}</pre>
+<h3>Root cause</h3><p>Database veya JWT değil; controller methodu içinde sıfıra bölme yapılmasıdır. Kod düzeltmesi için <code>int ii = i / 0</code> satırı kaldırılmalı ve endpoint tekrar test edilmelidir. Bu eğitim için önce mevcut haliyle yakalayın, sonra düzeltin.</p>
+</section>
+
+<section class="section" id="sos"><h2>11. SOS / Modern .NET Komutları</h2>
+<p>.NET 10 için WinDbg'nin SOS extension'ı modern CLR ile birlikte kullanılmalıdır. Önce process'in managed olduğunu doğrulayın.</p>
+<table><thead><tr><th>Komut</th><th>Amaç</th><th>Ne aramalı?</th></tr></thead><tbody>
+<tr><td><code>!soshelp</code></td><td>SOS komut yardımını açar.</td><td>Komut sürümde mevcut mu?</td></tr>
+<tr><td><code>!clrstack</code></td><td>Managed call stack.</td><td>Controller/action ve exception frame'i.</td></tr>
+<tr><td><code>!threads</code></td><td>Managed thread listesi.</td><td>Thread ID, GC mode, state.</td></tr>
+<tr><td><code>!pe</code></td><td>Son exception'ı yazdırır.</td><td>Type, message, stack.</td></tr>
+<tr><td><code>!dumpheap -stat</code></td><td>Managed heap tür istatistiği.</td><td>En çok count/size alan tipler.</td></tr>
+<tr><td><code>!dumpheap -type RestApi</code></td><td>RestApi türlerini bulur.</td><td>Object address listesi.</td></tr>
+<tr><td><code>!dumpobj ADDRESS</code></td><td>Bir managed object alanlarını gösterir.</td><td>MethodTable, fields, values.</td></tr>
+<tr><td><code>!gcroot ADDRESS</code></td><td>Object'in GC root zinciri.</td><td>Object neden yaşıyor?</td></tr>
+</tbody></table>
+<pre class="cmd">!loadby sos coreclr
+!clrstack
+!threads
+!pe</pre>
+<div class="callout warning"><strong>SOS yüklenmiyorsa:</strong> WinDbg Preview çoğu modern .NET process için SOS'u otomatik yükler. <code>!loadby sos coreclr</code> başarısızsa <code>lm m coreclr</code> ile runtime module adını kontrol edin; yanlış architecture (x86 vs x64) kullanmayın.</div>
+</section>
+
+<section class="section" id="threads"><h2>12. Thread Analizi</h2>
+<p>Process, uygulamanın tamamıdır; thread ise process içinde kod çalıştıran yürütme akışıdır. ASP.NET Core aynı anda gelen request'leri ThreadPool üzerinde işleyebilir. Bu projede manuel <code>Thread</code> veya <code>Task.Run</code> yoktur.</p>
+<pre class="cmd">~
+~*
+!threads
+~5s
+!clrstack</pre>
+<pre class="expected">Managed thread listesi ve her thread için state.
+~5s ile 5 numaralı native thread seçilir.
+!clrstack o thread'in managed stack'ini gösterir.</pre>
+<h3>Kontrollü concurrency</h3><p>Bu projede global rate limiter 10 saniyede 4 request kabul eder. Birden fazla PowerShell request'i göndererek farklı request thread'lerini gözlemleyebilirsiniz:</p>
+<pre class="cmd">1..4 | ForEach-Object { Start-Job { Invoke-WebRequest http://localhost:5120/health -UseBasicParsing } }
+Get-Job | Receive-Job -Wait</pre>
+<p>Thread ID'lerin request sayısıyla birebir eşleşmesi beklenmez; ThreadPool thread reuse yapar. Bu yüzden “her request yeni thread” varsayımı yanlıştır.</p>
+</section>
+
+<section class="section" id="async"><h2>13. Async / Await Gerçeği ve Demonstrasyon Sınırı</h2>
+<p>Controller action'ları bu repository sürümünde senkron <code>IActionResult</code> döner; EF çağrıları <code>SaveChanges</code>, <code>ToList</code>, <code>Find</code> ve <code>FirstOrDefault</code> şeklindedir. Async görünen kod yalnız middleware <code>Invoke</code> metotları ve JWT event'idir.</p>
+<div class="callout warning"><strong>Bu proje sürümünde async controller/EF senaryosu bulunmadığı için</strong> aşağıdaki snippet yalnız WinDbg kavramını göstermek içindir; gerçek RestApi kodu gibi yorumlamayın.</div>
+<pre>public async Task&lt;IActionResult&gt; Example()
+{
+    var item = await SomeAsyncOperation();
+    return Ok(item);
+}</pre>
+<p>Async state machine'de breakpoint await öncesi ve sonrası farklı stack gösterebilir. <code>!clrstack</code> içinde compiler-generated state machine isimleri görülebilir. Gerçek projede bu akışı izlemek için önce async EF refactor gerekir.</p>
+</section>
+
+<section class="section" id="memory"><h2>14. Memory, Heap ve Object Analizi</h2>
+<h3>14.1 Heap özeti</h3><pre class="cmd">!eeversion
+!dumpheap -stat
+!dumpheap -type RestApi.Models.Product
+!dumpheap -type System.String</pre>
+<pre class="expected">Statistics:
+      MT    Count    TotalSize Class Name
+...
+RestApi.Models.Product için MethodTable ve object count
+System.String için toplam count/size</pre>
+<p><strong>MT</strong> MethodTable adresidir; <strong>Count</strong> object sayısı; <strong>TotalSize</strong> toplam managed heap boyutudur. Adresleri kopyalayıp sonraki komutlara gerçek değer olarak verin; örnekteki adresler sabit değildir.</p>
+<h3>14.2 DTO/entity object'i bulma</h3><pre class="cmd">!dumpheap -type RestApi.Models.Product
+!dumpobj 000001F123456780
+!gcroot 000001F123456780</pre>
+<p><code>000001F123456780</code> gerçek çıktıdaki ikinci sütundan alınan object address'tir; kendiniz uydurmayın. <code>!dumpobj</code> fields içinde <code>Name</code> ve <code>Price</code> değerlerini gösterir. <code>!gcroot</code> object'in hangi controller/context/list tarafından tutulduğunu araştırır.</p>
+<h3>14.3 Memory leak</h3><p>Repository'de bilinen memory leak, static collection veya cache yoktur. Bu nedenle kontrollü leak örneği demonstrasyondur:</p><pre>static List&lt;byte[]&gt; DemoLeak = new();
+// Her request'te DemoLeak.Add(new byte[1024 * 1024]);</pre><p>Bu satırı production koduna eklemeyin. Eğitimde geçici olarak eklenirse heap snapshot'larını karşılaştırın, sonra geri alın.</p>
+</section>
+
+<section class="section" id="cpu"><h2>15. CPU / Performance Analizi</h2>
+<p>Repository'de bilinçli sonsuz loop veya yoğun CPU metodu bulunmuyor. Aşağıdaki senaryo demonstrasyon amaçlıdır. Gerçek projede daha doğru ilk ölçüm OTel/Grafana process CPU metricleri ve Windows Performance Monitor olur.</p>
+<pre class="cmd">~
+~* k
+!runaway
+!threads</pre>
+<pre class="expected">User Mode Time sıralamasında CPU tüketen thread öne çıkar.
+İlgili thread seçilip !clrstack ile managed method aranır.</pre>
+<p>Bir CPU şüphesinde: 1) process'i doğru seçin, 2) <code>!runaway</code> ile thread sürelerini karşılaştırın, 3) en sıcak thread'de <code>!clrstack</code>, 4) aynı stack'i birkaç saniye arayla tekrar alın. Tek snapshot kesin kanıt değildir.</p>
+</section>
+
+<section class="section" id="deadlock"><h2>16. Deadlock ve Lock</h2>
+<p>Mevcut RestApi kodunda lock veya manuel synchronization kullanılmıyor; gerçek deadlock senaryosu yoktur. Bu bölüm demonstrasyon kapsamındadır.</p>
+<pre class="cmd">~* k
+!threads
+!syncblk</pre>
+<p>Klasik SOS sürümlerinde <code>!syncblk</code> monitor sahiplerini/bekleyenleri gösterebilir. Modern runtime'da komut çıktısı farklı olabilir. Aynı lock üzerinde “Owner” ve “Waiting” thread'leri bulun, sonra her thread için <code>~Ns</code> ve <code>!clrstack</code> çalıştırın.</p>
+<div class="callout warning">Bir thread'i yalnızca stack'te bekliyor gördüğünüz için deadlock ilan etmeyin. İki veya daha fazla thread'in birbirinin tuttuğu kaynağı beklediğini kanıtlayın.</div>
+</section>
+
+<section class="section" id="dump"><h2>17. Dump Alma ve Dump Açma</h2>
+<h3>17.1 ProcDump kurulumu</h3><ol><li>Microsoft Sysinternals ProcDump sayfasından ProcDump ZIP'i indirin.</li><li>Örneğin <code>C:\Tools\ProcDump</code> klasörüne açın.</li><li>PowerShell'i bu klasörde açın.</li></ol>
+<pre class="cmd">$pid = (Get-CimInstance Win32_Process -Filter "Name='dotnet.exe'" | Where-Object CommandLine -like '*RestApi*').ProcessId
+.\procdump.exe -accepteula -ma $pid C:\Temp\RestApi-full.dmp</pre>
+<pre class="expected">Writing dump file ...
+Dump complete</pre>
+<p><code>-ma</code> full dump'tır; managed heap ve process state daha kapsamlıdır fakat dosya büyüktür ve hassas veri içerebilir.</p>
+<h3>17.2 Crash/exception dump</h3><pre class="cmd">.\procdump.exe -accepteula -e -ma -w dotnet.exe C:\Temp\RestApi-crash.dmp</pre><p><code>-e</code> exception olaylarını izler, <code>-w</code> process'i bekler. Production dump'larında dosya izinlerini ve secret redaction politikasını uygulayın.</p>
+<h3>17.3 WinDbg'de dump açma</h3><ol><li>WinDbg → <strong>File &gt; Open dump file</strong> veya Ctrl+D.</li><li><code>C:\Temp\RestApi-full.dmp</code> seçin.</li><li>Command penceresinde <code>.symfix</code>, <code>.reload /f</code>, <code>!clrstack</code> çalıştırın.</li><li><code>!pe</code> ile exception, <code>!threads</code> ile thread, <code>!dumpheap -stat</code> ile heap inceleyin.</li></ol>
+</section>
+
+<section class="section" id="postman"><h2>18. Postman + WinDbg Gerçek Senaryosu</h2>
+<ol><li>API'yi <code>dotnet run --project RestApi/RestApi.csproj --launch-profile http</code> ile çalıştırın.</li><li>WinDbg → <strong>File &gt; Attach to Process</strong> → RestApi command line'lı dotnet process → <strong>Attach</strong>.</li><li>Command'e <code>bp RestApi!RestApi.Controllers.ProductController.Create</code>, sonra <code>g</code> yazın.</li><li>Postman açın. <code>POST http://localhost:5120/api/Product</code> seçin.</li><li>Headers'e <code>Authorization: Bearer &lt;token&gt;</code> ve <code>Content-Type: application/json</code> ekleyin.</li><li>Body → raw → JSON seçin.</li><li>Gönderin ve WinDbg'nin breakpoint'e gelmesini bekleyin.</li><li><code>!clrstack</code> ile MVC invocation zincirini, <code>dv</code> ile product parametresini kontrol edin.</li><li>F10 ile Add/SaveChanges/Ok satırlarını geçin.</li><li>F5 ile devam edin; Postman response panelinde 200 ve Product JSON görülmeli.</li></ol>
+<pre class="cmd">POST http://localhost:5120/api/Product
+Authorization: Bearer eyJ...
+Content-Type: application/json
+
+{
+  "name": "Keyboard",
+  "price": 1299.90
+}</pre>
+<pre class="expected">HTTP/1.1 200 OK
+{"id":1,"name":"Keyboard","price":1299.90}</pre>
+</section>
+
+<section class="section" id="hatalar"><h2>19. Hatalı İstek Senaryoları</h2>
+<table><thead><tr><th>Senaryo</th><th>İstek</th><th>Beklenen</th><th>WinDbg noktası</th></tr></thead><tbody>
+<tr><td>Eksik city</td><td>Login body'den city çıkar.</td><td>400 ModelState</td><td><code>AuthController.Login</code> başında breakpoint.</td></tr>
+<tr><td>Yanlış city</td><td><code>city: "bursa"</code></td><td>400 CityValid</td><td>Controller'a girmeden model binding/validation.</td></tr>
+<tr><td>Token yok</td><td>GET Product auth olmadan</td><td>401</td><td>Controller breakpoint'e düşmez; auth middleware akışını izleyin.</td></tr>
+<tr><td>Yanlış role</td><td>Role Note token ile Product çağır.</td><td>403</td><td>Controller'a girmeden authorization sonucu.</td></tr>
+<tr><td>Bulunmayan id</td><td>PUT/DELETE id=999999</td><td>404</td><td>Update/Delete breakpoint; <code>Find</code> sonrası null.</td></tr>
+<tr><td>Note exception</td><td>GET Note</td><td>500</td><td><code>DivideByZeroException</code>, <code>!pe</code>.</td></tr>
+<tr><td>Yanlış JSON</td><td><code>{bad json</code></td><td>400</td><td>Controller'a girmeyebilir.</td></tr>
+<tr><td>DB kapalı</td><td>Postgres'i durdur.</td><td>Health 503 / DB exception</td><td>Startup <code>Migrate</code> veya DbContext check.</td></tr>
+</tbody></table>
+<pre class="cmd">Invoke-WebRequest http://localhost:5120/api/Product -UseBasicParsing
+Invoke-RestMethod http://localhost:5120/api/Note -Headers @{Authorization="Bearer $token"}</pre>
+</section>
+
+<section class="section" id="logging"><h2>20. Logging ile WinDbg Arasındaki Fark</h2>
+<table><thead><tr><th>Logging</th><th>WinDbg</th></tr></thead><tbody><tr><td>“Request başladı” gibi önceden yazılmış olaydır.</td><td>CPU o anda gerçek hangi satırda, hangi local hangi değerde görülür.</td></tr><tr><td>Seq/Grafana'da geçmiş olay aranır.</td><td>Process pause edilir ve canlı state incelenir.</td></tr><tr><td>PII/secret yanlışlıkla loglanabilir.</td><td>Heap'teki secret'lar da görülebilir; dump erişimini koruyun.</td></tr></tbody></table>
+<pre class="cmd">docker logs net-perform-api --tail 100
+# Seq UI
+Start-Process http://localhost:8081</pre>
+<p>Serilog Console ve Seq sink aktiftir. File sink paketi mevcut olsa da Program.cs içinde file sink configure edilmemiştir.</p>
+</section>
+
+<section class="section" id="matrix"><h2>21. Gerçek Proje Test Matrisi</h2>
+<table><thead><tr><th>Test</th><th>Endpoint</th><th>Amaç</th><th>WinDbg özelliği</th><th>Başarı</th></tr></thead><tbody>
+<tr><td>1</td><td>POST /api/Auth/login</td><td>PasswordManager ve JWT</td><td>Breakpoint, Step Into, locals</td><td>Token ve cookie</td></tr>
+<tr><td>2</td><td>POST /api/Product</td><td>Controller + EF Add/SaveChanges</td><td>Call stack, F10</td><td>200 Product</td></tr>
+<tr><td>3</td><td>GET /api/Note</td><td>Gerçek exception</td><td><code>sxe clr</code>, <code>!pe</code></td><td>Root cause divide by zero</td></tr>
+<tr><td>4</td><td>GET /api/Product</td><td>ThreadPool request</td><td><code>~*</code>, <code>!threads</code></td><td>Request stack'i</td></tr>
+<tr><td>5</td><td>/health</td><td>DbContext health</td><td>Db check breakpoint/log</td><td>Healthy 200</td></tr>
+<tr><td>6</td><td>Dump</td><td>Heap/exception snapshot</td><td><code>!dumpheap</code>, <code>!gcroot</code></td><td>Object/root analizi</td></tr>
+</tbody></table>
+</section>
+
+<section class="section" id="troubleshoot"><h2>22. “Neden Olmadı?” Rehberi</h2>
+<details class="card"><summary><strong>Breakpoint pending veya tetiklenmiyor</strong></summary><ol><li>Doğru dotnet PID'si mi?</li><li><code>Get-CimInstance Win32_Process</code> command line'da RestApi var mı?</li><li>RestApi.dll doğru module mü: <code>lm m RestApi</code>?</li><li>PDB/source path doğru mu?</li><li>Gerçekten endpoint çağrıldı mı?</li><li>Role auth nedeniyle controller'a hiç girilmemiş olabilir mi?</li><li>Release optimization local değişkeni kaldırmış olabilir mi?</li></ol></details>
+<details class="card"><summary><strong>SOS / !clrstack tanınmıyor</strong></summary><p>Process managed olmayabilir, yanlış architecture kullanıyor olabilirsiniz veya CLR module henüz yüklenmemiştir. <code>lm m coreclr</code>, <code>.loadby sos coreclr</code>, <code>!soshelp</code> deneyin. WinDbg x64 ile .NET x64 runtime kullanın.</p></details>
+<details class="card"><summary><strong>Attach Access Denied</strong></summary><p>WinDbg'yi yönetici olarak açın, aynı kullanıcıyı kullanın, Visual Studio'nun process'i pause etmediğini kontrol edin. Protected/system process'e attach etmeyin.</p></details>
+<details class="card"><summary><strong>API 401/403 veriyor ve breakpoint'e düşmüyor</strong></summary><p>Authorization controller'dan önce çalışır. Login token role claim'i <code>Product</code> veya <code>Note</code> olmalı. Token header'ı <code>Authorization: Bearer ...</code> biçiminde gönderin.</p></details>
+<details class="card"><summary><strong>Database connection failed</strong></summary><p>Host modunda <code>docker compose ps postgres</code>, <code>pg_isready</code> ve <code>localhost:15432</code> kontrol edin. Host appsettings <code>localhost:15432</code>, Docker env ise <code>postgres:5432</code> olmalıdır. Host process'e Docker DNS adı vermeyin.</p></details>
+<details class="card"><summary><strong>HTTPS redirect / port uyarısı</strong></summary><p>HTTP profiliyle <code>http://localhost:5120</code> kullanın. HTTPS profili <code>https://localhost:7209</code> ve HTTP 5120 açar. Development certificate için <code>dotnet dev-certs https --trust</code> çalıştırın.</p></details>
+<details class="card"><summary><strong>Dump açıldı ama source yok</strong></summary><p>Dump alınan build'in PDB'si gerekir. Aynı commit/build çıktısını koruyun; <code>.sympath</code>, <code>.srcpath</code>, <code>.reload /f</code> çalıştırın.</p></details>
+</section>
+
+<section class="section" id="reference"><h2>23. WinDbg Komut Referansı</h2>
+<table><thead><tr><th>Komut</th><th>Kullanım</th></tr></thead><tbody>
+<tr><td><code>g</code></td><td>Continue; process'i devam ettirir.</td></tr><tr><td><code>p</code></td><td>Step over; method içine girmez.</td></tr><tr><td><code>t</code></td><td>Step into; çağrı içine girer.</td></tr><tr><td><code>gu</code></td><td>Step out; mevcut methoddan çıkar.</td></tr><tr><td><code>k / kv / kp</code></td><td>Call stack; parametre ve frame bilgisi.</td></tr><tr><td><code>~</code></td><td>Thread listesi.</td></tr><tr><td><code>~Ns</code></td><td>N numaralı thread'e geçer.</td></tr><tr><td><code>~* k</code></td><td>Tüm thread stack'leri.</td></tr><tr><td><code>lm</code></td><td>Loaded module listesi.</td></tr><tr><td><code>bp / bl / bc / bd / be</code></td><td>Breakpoint koy/listele/sil/disable/enable.</td></tr><tr><td><code>.symfix / .sympath / .reload</code></td><td>Symbol path ve yükleme.</td></tr><tr><td><code>.srcpath</code></td><td>Source path.</td></tr><tr><td><code>!clrstack</code></td><td>Managed stack.</td></tr><tr><td><code>!threads</code></td><td>SOS managed thread listesi.</td></tr><tr><td><code>!pe</code></td><td>Print exception.</td></tr><tr><td><code>!dumpheap -stat</code></td><td>Heap type statistics.</td></tr><tr><td><code>!dumpobj ADDRESS</code></td><td>Object fields.</td></tr><tr><td><code>!gcroot ADDRESS</code></td><td>GC root path.</td></tr><tr><td><code>!runaway</code></td><td>Thread CPU/user time karşılaştırması.</td></tr><tr><td><code>!syncblk</code></td><td>Managed monitor/lock araştırması; runtime desteği değişebilir.</td></tr>
+</tbody></table>
+<h3>GUI referansı</h3><table><thead><tr><th>İşlem</th><th>Menü / düğme</th><th>Komut</th></tr></thead><tbody><tr><td>Attach</td><td>File → Attach to Process → Attach</td><td><code>.attach PID</code> sürüme göre</td></tr><tr><td>Dump aç</td><td>File → Open dump file</td><td><code>windbg -z file.dmp</code></td></tr><tr><td>Breakpoint</td><td>Debug → Breakpoints → New Breakpoint</td><td><code>bp METHOD</code></td></tr><tr><td>Continue</td><td>Debug → Go</td><td><code>g</code></td></tr><tr><td>Step over</td><td>Debug → Step Over</td><td><code>p</code></td></tr><tr><td>Step into</td><td>Debug → Step Into</td><td><code>t</code></td></tr><tr><td>Step out</td><td>Debug → Step Out</td><td><code>gu</code></td></tr><tr><td>Break</td><td>Debug → Break</td><td>Ctrl+Break</td></tr></tbody></table>
+</section>
+
+<section class="section" id="final"><h2>24. Final Lab: Note Exception'ını Baştan Sona Bul</h2>
+<h3>Amaç</h3><p>Gerçek RestApi endpoint'inde oluşan exception'ın controller source satırından root cause'a kadar bulunması.</p>
+<ol><li>PostgreSQL'i başlatın ve API'yi Development HTTP profiliyle çalıştırın.</li><li>WinDbg'yi yönetici olarak açın; doğru dotnet process'e attach olun.</li><li><code>.symfix</code>, <code>.srcpath</code>, <code>.reload /f</code> çalıştırın.</li><li><code>sxe clr</code> yazıp <code>g</code> ile devam edin.</li><li>Note role token alın veya uygun test kullanıcısını oluşturun.</li><li><code>GET http://localhost:5120/api/Note</code> gönderin.</li><li>WinDbg durunca <code>!pe</code> ile exception type/message okuyun.</li><li><code>!clrstack</code> çıktısında <code>RestApi.Controllers.NoteController.GetAll</code> frame'ini bulun.</li><li>Source window açılırsa <code>int ii = i / 0;</code> satırını görün. Açılmazsa <code>lmvm RestApi</code> ve source path'i düzeltin.</li><li>Breakpoint'teki local değerleri <code>dv</code> ile okuyun.</li><li>GlobalExceptionHandler frame'lerini ve error ID üretimini stack'te inceleyin.</li><li>İşlemi durdurun, geçici olarak sıfıra bölme satırını kaldırın, build edin ve tekrar test edin.</li><li>İkinci testte 500 yerine beklenen Note listesi veya normal endpoint davranışı görülmelidir.</li></ol>
+<pre class="cmd">sxe clr
+g
+!pe
+!clrstack
+k
+dv
+~* k</pre>
+<pre class="expected">System.DivideByZeroException
+RestApi.Controllers.NoteController.GetAll
+RestApi.Middleware.GlobalExceptionHandler.Invoke
+HTTP 500 ve error code (mevcut production handler davranışı)</pre>
+<div class="callout success"><strong>Lab tamamlandı</strong> demek için exception türünü, source satırını, controller methodunu ve düzeltme sonrası davranışı birbirinden bağımsız olarak açıklayabilmelisiniz.</div>
+</section>
+
+<section class="section" id="checklist"><h2>25. WinDbg Öğrenme Kontrol Listesi</h2>
+<div class="two"><ul><li>☐ WinDbg kuruldu</li><li>☐ Symbol cache ayarlandı</li><li>☐ Source path ayarlandı</li><li>☐ PostgreSQL başlatıldı</li><li>☐ RestApi çalıştırıldı</li><li>☐ Doğru PID bulundu</li><li>☐ Process'e attach olundu</li><li>☐ Continue yapıldı</li><li>☐ ProductController breakpoint'i çalıştı</li><li>☐ F10/F11/F5 kullanıldı</li><li>☐ Parametre/local incelendi</li><li>☐ Call stack okundu</li></ul><ul><li>☐ JWT role ile 401/403 ayrımı görüldü</li><li>☐ EF SaveChanges stack'i incelendi</li><li>☐ Note exception yakalandı</li><li>☐ <code>!pe</code> kullanıldı</li><li>☐ <code>!clrstack</code> kullanıldı</li><li>☐ <code>!threads</code> kullanıldı</li><li>☐ <code>!dumpheap -stat</code> kullanıldı</li><li>☐ Object address bulundu</li><li>☐ <code>!dumpobj</code> / <code>!gcroot</code> denendi</li><li>☐ Full dump oluşturuldu</li><li>☐ Dump WinDbg'de açıldı</li><li>☐ Final Lab tamamlandı</li></ul></div>
+</section>
+
+<section class="section" id="notlar"><h2>26. Projede Bulunmayan Özellikler İçin Açık Not</h2><p>Aşağıdaki başlıklar istenen genel WinDbg eğitim kapsamının parçasıdır, ancak bu repository sürümünde gerçek implementasyonları yoktur. Bu nedenle örnekleri gerçek RestApi davranışı gibi kullanmayın:</p><ul><li>Swagger/OpenAPI ve Swagger UI</li><li>Unit/integration test projesi</li><li>Async controller/EF query, CancellationToken</li><li>HostedService/background queue</li><li>HttpClient ile dış API</li><li>Cache/Redis</li><li>Manuel lock, monitor, deadlock</li><li>Bilinen memory leak veya sonsuz CPU loop</li></ul><p>Bu konular için kontrollü demo kodu eklemek mümkündür; ancak mevcut production kodunu değiştirmeden önce ayrı branch veya geçici çalışma kopyası kullanın.</p></section>
+
+<footer class="section"><p class="small">Bu dokümandaki PID, address, MethodTable, thread ID, token ve dump path değerleri örnektir. WinDbg çıktısı işletim sistemi, runtime, build configuration, JIT optimization ve request zamanına göre değişir. Bir komutun örnek çıktısını birebir beklemeyin; önemli olan aynı kavramların ve frame'lerin görünmesidir.</p></footer>
+</main></div>
+<button class="toc-top" onclick="location.href='#top'">Yukarı</button>
+<script>document.querySelectorAll('pre').forEach(function(block){block.addEventListener('dblclick',function(){var r=document.createRange();r.selectNodeContents(block);var s=window.getSelection();s.removeAllRanges();s.addRange(r)})});</script>
+</body>
+</html>
