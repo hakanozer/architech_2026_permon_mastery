@@ -24,6 +24,8 @@ public class GlobalExceptionHandler
 
     private async Task HandleExceptionAsync(HttpContext httpContext, Exception exception)
     {
+        // opentelemetry jegager ui da görülmek üzere trace id oluşturuluyor
+        var traceId = httpContext.TraceIdentifier;
         var errorId = Guid.NewGuid().ToString();
 
         // Detaylı log - sunucu tarafında
@@ -43,7 +45,8 @@ public class GlobalExceptionHandler
         {
             error = "An unexpected error occurred. Please try again later.",
             code = errorId,
-            timestamp = DateTime.UtcNow
+            timestamp = DateTime.UtcNow,
+            traceId = traceId
         };
 
         httpContext.Response.Clear();

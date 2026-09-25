@@ -49,7 +49,10 @@ builder.Services.AddOpenTelemetry()
             options.BatchExportProcessorOptions.ScheduledDelayMilliseconds = 1000;
         }))
     .WithTracing(traces => traces
-        .AddAspNetCoreInstrumentation()
+        .AddAspNetCoreInstrumentation(options =>
+        {
+            options.RecordException = true;
+        })
         .AddHttpClientInstrumentation()
         .AddSqlClientInstrumentation()
         .AddOtlpExporter(options =>
